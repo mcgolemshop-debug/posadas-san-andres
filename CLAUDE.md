@@ -118,9 +118,10 @@ Detalle completo en `ESPECIFICACION.md` sección 5.
 - [ ] **Si Vulcanos confirma directamente** las reservas o requiere visto bueno del Dueño para montos altos (afecta lógica de confirmación en Fase 3).
 - [ ] **Nombres definitivos de los apartamentos** de Confort (los actuales — Amanecer, Solana, Atardecer, Ocaso — son provisionales).
 
-### Bloqueantes para Fase 2 operacional
-- [ ] **Servicio de emails transaccionales** (propuesta: Resend, free hasta 3k/mes).
-- [ ] **Datos bancarios reales** (Zelle, Binance, banco Panamá, banco Venezuela) para mostrar al cliente.
+### Bloqueantes para producción real
+- [ ] **Datos bancarios reales** (Zelle, Binance, banco Panamá, banco Venezuela) para mostrar al cliente en la página de confirmación. Por ahora hay un placeholder "Datos bancarios próximamente publicados aquí".
+- [ ] **Dominio verificado en Resend** (para enviar email al CLIENTE además del Dueño). Hoy Resend está en modo prueba y solo envía a mcgolemshop@gmail.com.
+- [ ] **Fotos reales** de las posadas y apartamentos para reemplazar los placeholders coloridos de la galería.
 
 ### Bloqueantes para Fase 4
 - [ ] **Dominio personalizado** para el despliegue en Vercel.
@@ -133,9 +134,10 @@ Detalle completo en `ESPECIFICACION.md` sección 5.
 - ✅ Características y capacidad apartamentos: 7 personas c/u (28 total). Amanecer y Solana → garage. Atardecer y Ocaso → piscina.
 - ✅ Beach: capacidad 20 personas.
 - ✅ **Comprobante de pago OBLIGATORIO** al momento de enviar la reserva (Fase 2). Se sube a Supabase Storage y la reserva pendiente queda enlazada a su URL.
+- ✅ **Servicio de email = Resend** en modo prueba (sin dominio). Notificación llega a `mcgolemshop@gmail.com` con link firmado al comprobante.
 
 ## 9. Estado actual
 
 - ✅ **Fase 1 completa** (28 may 2026). Supabase: 10 tablas + RLS para 4 roles + datos confirmados (12 precios, 4 apartamentos con capacidad/característica, estadías mínimas). 4 usuarios de prueba. Repo en `https://github.com/mcgolemshop-debug/posadas-san-andres`. Verificación 16/16 OK con `node --env-file=.env.local supabase/scripts/verificar-fase1.mjs`.
-- 🚧 **Fase 2 en curso** (28 may 2026). Cara pública: home, página de posada, formulario de reserva con cálculo prorrateado, envío crea reserva pendiente con comprobante de pago obligatorio.
-- ⏸ Fases 3, 4 esperando.
+- ✅ **Fase 2 completa** (28 may 2026). Cara pública funcionando end-to-end: home con 2 cards, página de cada posada, formulario de reserva con cálculo prorrateado en vivo, envío crea reserva `pendiente` + sube comprobante a Storage + dispara email al Dueño vía Resend a `mcgolemshop@gmail.com` (modo prueba sin dominio verificado todavía). Reserva probada: 5 noches Confort apartamento baja = $425 ✓.
+- ⏸ Fases 3, 4 esperando aprobación.

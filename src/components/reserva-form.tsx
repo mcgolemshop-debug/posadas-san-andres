@@ -82,7 +82,6 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios }: Props
   return (
     <form
       action={formAction}
-      encType="multipart/form-data"
       className="grid lg:grid-cols-[1fr_360px] gap-8"
     >
       {/* Hidden fields para que la Server Action reciba todo */}

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { calcularPrecioReserva } from '@/lib/pricing/calcular';
 import { validarDisponibilidad } from '@/lib/pricing/disponibilidad';
+import { notificarDuenoNuevaReserva } from '@/lib/email/notificar-dueno';
 import type { ModalidadReserva, PrecioInfo, TemporadaInfo } from '@/lib/pricing/tipos';
 
 const TIPOS_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf'];
@@ -216,7 +217,45 @@ export async function enviarReserva(
     return { error: `No pude guardar la reserva: ${insertErr?.message ?? 'error desconocido'}` };
   }
 
-  // --- 9) Redirigir a la página de confirmación ---
+  // --- 9) Notificar al Dueño por email (sin bloquear si falla) ---
+  // Generamos una URL firmada del comprobante con validez 7 días para incluir en el email
+  const { data: signed } = await admin.storage
+    .from('comprobantes-pago')
+    .createSignedUrl(nombreArchivo, 60 * 60 * 24 * 7);
+
+  // Leemos info adicional para el cuerpo del email
+  const { data: extras } = await admin
+    .from('reservas')
+    .select('posadas(nombre), apartamentos(nombre)')
+    .eq('id', reserva.id)
+    .maybeSingle();
+  const posadaNombre = (() => {
+    const p = extras?.posadas as { nombre: string } | { nombre: string }[] | null;
+    return Array.isArray(p) ? p[0]?.nombre : p?.nombre;
+  })() ?? 'Posada';
+  const aptoNombre = (() => {
+    const a = extras?.apartamentos as { nombre: string } | { nombre: string }[] | null;
+    return Array.isArray(a) ? (a[0]?.nombre ?? null) : (a?.nombre ?? null);
+  })();
+
+  // Disparar el email en background. Si falla, solo lo logueamos.
+  await notificarDuenoNuevaReserva({
+    reserva_id: reserva.id as string,
+    posada_nombre: posadaNombre,
+    apartamento_nombre: aptoNombre,
+    modalidad: datosOK.modalidad,
+    fecha_inicio: datosOK.fecha_inicio,
+    fecha_fin: datosOK.fecha_fin,
+    num_personas: datosOK.num_personas,
+    total_usd: resultado.total_usd,
+    cliente_nombre: datosOK.cliente_nombre,
+    cliente_telefono: datosOK.cliente_telefono,
+    cliente_email: datosOK.cliente_email,
+    notas: datosOK.notas,
+    comprobante_url_publica: signed?.signedUrl ?? null,
+  });
+
+  // --- 10) Redirigir a la página de confirmación ---
   // (redirect lanza una excepción especial que el framework captura)
   redirect(`/reserva-enviada/${reserva.id}`);
 }
