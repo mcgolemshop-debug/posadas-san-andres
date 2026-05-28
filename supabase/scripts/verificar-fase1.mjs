@@ -64,12 +64,12 @@ async function main() {
   if (precios?.length === 12) ok(`precios: 12 filas (3 Beach baja + 3 Beach altas + 6 Confort)`);
   else bad(`precios: ${precios?.length ?? 0} filas (esperaba 12)`);
 
-  // tablas vacías
+  // Tablas operacionales: existen y son consultables
+  // (no asumimos que estén vacías porque ya estamos en Fase 2/3)
   for (const tabla of ['reservas', 'pagos', 'gastos', 'comisiones', 'nomina']) {
     const { count, error } = await admin.from(tabla).select('*', { count: 'exact', head: true });
     if (error) bad(`${tabla}: error ${error.message}`);
-    else if (count === 0) ok(`${tabla}: vacía (correcto al iniciar)`);
-    else bad(`${tabla}: ${count} filas (esperaba 0)`);
+    else ok(`${tabla}: existe y consultable (${count ?? 0} filas)`);
   }
 
   console.log('\n👥 2. Usuarios\n');
