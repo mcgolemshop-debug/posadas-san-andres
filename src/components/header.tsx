@@ -1,10 +1,16 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 /**
- * Header de la cara pública. Logo textual y enlaces a las dos posadas.
- * Cuando Orlando defina logo y paleta de marca, se reemplaza aquí.
+ * Header de la cara pública. NO se muestra en rutas /admin/*
+ * (esas tienen su propia barra de navegación admin).
  */
 export function Header() {
+  const pathname = usePathname();
+  if (pathname.startsWith('/admin')) return null;
+
   return (
     <header className="border-b border-[var(--border)] bg-[var(--surface)]/80 backdrop-blur sticky top-0 z-30">
       <nav className="mx-auto max-w-6xl flex items-center justify-between px-4 sm:px-6 py-4">

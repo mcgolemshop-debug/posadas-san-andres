@@ -115,7 +115,6 @@ Detalle completo en `ESPECIFICACION.md` sección 5.
 
 ### Bloqueantes para Fase 3
 - [ ] **Fechas, precio y noches mínimas de Semana Santa** (variable cada año, marzo–abril).
-- [ ] **Si Vulcanos confirma directamente** las reservas o requiere visto bueno del Dueño para montos altos (afecta lógica de confirmación en Fase 3).
 - [ ] **Nombres definitivos de los apartamentos** de Confort (los actuales — Amanecer, Solana, Atardecer, Ocaso — son provisionales).
 
 ### Bloqueantes para producción real
@@ -135,9 +134,11 @@ Detalle completo en `ESPECIFICACION.md` sección 5.
 - ✅ Beach: capacidad 20 personas.
 - ✅ **Comprobante de pago OBLIGATORIO** al momento de enviar la reserva (Fase 2). Se sube a Supabase Storage y la reserva pendiente queda enlazada a su URL.
 - ✅ **Servicio de email = Resend** en modo prueba (sin dominio). Notificación llega a `mcgolemshop@gmail.com` con link firmado al comprobante.
+- ✅ **Vulcanos Tours confirma reservas directamente**, sin requerir visto bueno del Dueño. El Dueño ve todas y puede auditar.
 
 ## 9. Estado actual
 
 - ✅ **Fase 1 completa** (28 may 2026). Supabase: 10 tablas + RLS para 4 roles + datos confirmados (12 precios, 4 apartamentos con capacidad/característica, estadías mínimas). 4 usuarios de prueba. Repo en `https://github.com/mcgolemshop-debug/posadas-san-andres`. Verificación 16/16 OK con `node --env-file=.env.local supabase/scripts/verificar-fase1.mjs`.
 - ✅ **Fase 2 completa** (28 may 2026). Cara pública funcionando end-to-end: home con 2 cards, página de cada posada, formulario de reserva con cálculo prorrateado en vivo, envío crea reserva `pendiente` + sube comprobante a Storage + dispara email al Dueño vía Resend a `mcgolemshop@gmail.com` (modo prueba sin dominio verificado todavía). Reserva probada: 5 noches Confort apartamento baja = $425 ✓.
-- ⏸ Fases 3, 4 esperando aprobación.
+- 🚧 **Fase 3 en curso** (28 may 2026). Panel admin con 4 roles, confirmación manual de reservas, calendario de ocupación, gestión de usuarios y precios.
+- ⏸ Fase 4 esperando.

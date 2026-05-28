@@ -1,8 +1,14 @@
+'use client';
+
+import { usePathname } from 'next/navigation';
+
 /**
- * Footer simple. Sin redes sociales todavía porque están pendientes
- * de que Orlando los confirme.
+ * Footer simple. NO se muestra en /admin (panel tiene su propia firma).
  */
 export function Footer() {
+  const pathname = usePathname();
+  if (pathname.startsWith('/admin')) return null;
+
   return (
     <footer className="mt-16 border-t border-[var(--border)] bg-[var(--surface)]">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-[var(--muted)]">
