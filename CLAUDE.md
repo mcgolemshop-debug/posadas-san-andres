@@ -15,6 +15,7 @@ Una sola aplicación con experiencia separada por posada de cara al cliente, pan
 - **Cuenta GitHub para el repo:** `mcgolemshop@gmail.com`.
 - **Idioma de la interfaz:** español. **Moneda:** USD.
 - **Zona horaria del negocio:** `America/Caracas`.
+- **Check-in:** 2:00 PM. **Check-out:** 12:00 m (mediodía).
 
 ## 2. Stack tecnológico
 
@@ -112,16 +113,26 @@ Detalle completo en `ESPECIFICACION.md` sección 5.
 
 > Actualizar esta lista a medida que Orlando dicte respuestas o surjan decisiones nuevas.
 
-- [ ] **Precios Confort** por apartamento y completa, en todas las temporadas.
-- [ ] **Precios Beach** en alta, Navidad 1 y Navidad 2.
-- [ ] **Estadía mínima** por temporada.
-- [ ] **Características de cada apartamento** de Confort (piscina, garage, capacidad).
-- [ ] **Fechas y precio de Semana Santa** (variable cada año).
-- [ ] **Comprobante de pago obligatorio** sí/no al momento de reservar (Fase 2).
-- [ ] **Servicio de emails transaccionales** (probable: Resend).
+### Bloqueantes para Fase 2/3
+- [ ] **Fechas, precio y noches mínimas de Semana Santa** (variable cada año, marzo–abril).
+- [ ] **Si Vulcanos confirma directamente** las reservas o requiere visto bueno del Dueño para montos altos (afecta lógica de confirmación en Fase 3).
+- [ ] **Si se exige comprobante de pago** antes de confirmar una reserva (afecta el formulario en Fase 2).
+- [ ] **Nombres definitivos de los apartamentos** de Confort (los actuales — Amanecer, Solana, Atardecer, Ocaso — son provisionales).
+
+### Bloqueantes para Fase 2 operacional
+- [ ] **Servicio de emails transaccionales** (propuesta: Resend, free hasta 3k/mes).
 - [ ] **Datos bancarios reales** (Zelle, Binance, banco Panamá, banco Venezuela) para mostrar al cliente.
-- [ ] **Dominio personalizado** para el despliegue en Vercel (Fase 4).
+
+### Bloqueantes para Fase 4
+- [ ] **Dominio personalizado** para el despliegue en Vercel.
 - [ ] **Logo y paleta de marca** para Posadas San Andrés.
+
+### Resueltas (28 may 2026)
+- ✅ Precios Confort: $85 apto baja, $100 apto alta, $320 completa baja, $400 completa alta y Nav1, $450 Nav2.
+- ✅ Precios Beach altas: $300 alta plano, $325 Nav1 y Nav2 plano.
+- ✅ Estadía mínima: Baja 2 noches, Alta 3, Navidad 1 y 2 = 4.
+- ✅ Características y capacidad apartamentos: 7 personas c/u (28 total). Amanecer y Solana → garage. Atardecer y Ocaso → piscina.
+- ✅ Beach: capacidad 20 personas.
 
 ## 9. Estado actual
 

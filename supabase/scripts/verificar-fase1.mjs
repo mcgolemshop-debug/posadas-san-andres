@@ -40,20 +40,29 @@ async function main() {
     ok(`posadas: 2 filas (confort, beach)`);
   } else bad(`posadas: ${posadas?.length ?? 0} filas (esperaba 2)`);
 
-  // apartamentos: 4 filas en Confort
-  const { data: aptos } = await admin.from('apartamentos').select('nombre, posada_id');
-  if (aptos?.length === 4) ok(`apartamentos: 4 filas (${aptos.map(a => a.nombre).join(', ')})`);
-  else bad(`apartamentos: ${aptos?.length ?? 0} filas (esperaba 4)`);
+  // apartamentos: 4 filas en Confort con capacidad 7 y características asignadas
+  const { data: aptos } = await admin
+    .from('apartamentos')
+    .select('nombre, capacidad, caracteristica')
+    .order('orden');
+  if (aptos?.length === 4 && aptos.every(a => a.capacidad === 7)) {
+    ok(`apartamentos: 4 filas, todos capacidad 7 (${aptos.map(a => `${a.nombre}/${a.caracteristica}`).join(', ')})`);
+  } else bad(`apartamentos: ${aptos?.length ?? 0} filas o capacidades incorrectas`);
 
-  // temporadas: 4 filas (Baja, Alta 2026, Navidad 1, Navidad 2)
-  const { data: temps } = await admin.from('temporadas').select('nombre');
-  if (temps?.length === 4) ok(`temporadas: 4 filas (${temps.map(t => t.nombre).join(', ')})`);
-  else bad(`temporadas: ${temps?.length ?? 0} filas (esperaba 4)`);
+  // temporadas: 4 filas con estadía mínima correcta
+  const { data: temps } = await admin
+    .from('temporadas')
+    .select('nombre, estadia_minima_noches')
+    .order('prioridad');
+  const minEsperado = { 'Baja': 2, 'Alta 2026': 3, 'Navidad 1 (2026)': 4, 'Navidad 2 (2026-2027)': 4 };
+  if (temps?.length === 4 && temps.every(t => t.estadia_minima_noches === minEsperado[t.nombre])) {
+    ok(`temporadas: 4 filas con noches mínimas correctas (${temps.map(t => `${t.nombre}:${t.estadia_minima_noches}n`).join(', ')})`);
+  } else bad(`temporadas: ${temps?.length ?? 0} filas o estadías incorrectas`);
 
-  // precios: 3 filas (Beach baja 12/16/20)
-  const { data: precios } = await admin.from('precios').select('precio_usd, num_personas');
-  if (precios?.length === 3) ok(`precios: 3 filas conocidas (${precios.map(p => `${p.num_personas}pax→$${p.precio_usd}`).join(', ')})`);
-  else bad(`precios: ${precios?.length ?? 0} filas (esperaba 3)`);
+  // precios: 12 filas totales
+  const { data: precios } = await admin.from('precios').select('precio_usd');
+  if (precios?.length === 12) ok(`precios: 12 filas (3 Beach baja + 3 Beach altas + 6 Confort)`);
+  else bad(`precios: ${precios?.length ?? 0} filas (esperaba 12)`);
 
   // tablas vacías
   for (const tabla of ['reservas', 'pagos', 'gastos', 'comisiones', 'nomina']) {
@@ -94,9 +103,9 @@ async function main() {
 
   // anon SÍ puede leer precios activos (necesita para mostrar precios en la home)
   const { data: anonPrecios } = await anon.from('precios').select('precio_usd');
-  if ((anonPrecios?.length ?? 0) === 3) {
+  if ((anonPrecios?.length ?? 0) === 12) {
     ok(`anon puede leer precios activos (necesario para mostrar tarifas)`);
-  } else bad(`anon precios: ${anonPrecios?.length} filas (esperaba 3)`);
+  } else bad(`anon precios: ${anonPrecios?.length} filas (esperaba 12)`);
 
   console.log('\n🔑 4. Auth — login con cuenta dueño\n');
   const { data: signIn, error: signInErr } = await anon.auth.signInWithPassword({
