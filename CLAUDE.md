@@ -113,10 +113,9 @@ Detalle completo en `ESPECIFICACION.md` sección 5.
 
 > Actualizar esta lista a medida que Orlando dicte respuestas o surjan decisiones nuevas.
 
-### Bloqueantes para Fase 2/3
+### Bloqueantes para Fase 3
 - [ ] **Fechas, precio y noches mínimas de Semana Santa** (variable cada año, marzo–abril).
 - [ ] **Si Vulcanos confirma directamente** las reservas o requiere visto bueno del Dueño para montos altos (afecta lógica de confirmación en Fase 3).
-- [ ] **Si se exige comprobante de pago** antes de confirmar una reserva (afecta el formulario en Fase 2).
 - [ ] **Nombres definitivos de los apartamentos** de Confort (los actuales — Amanecer, Solana, Atardecer, Ocaso — son provisionales).
 
 ### Bloqueantes para Fase 2 operacional
@@ -133,8 +132,10 @@ Detalle completo en `ESPECIFICACION.md` sección 5.
 - ✅ Estadía mínima: Baja 2 noches, Alta 3, Navidad 1 y 2 = 4.
 - ✅ Características y capacidad apartamentos: 7 personas c/u (28 total). Amanecer y Solana → garage. Atardecer y Ocaso → piscina.
 - ✅ Beach: capacidad 20 personas.
+- ✅ **Comprobante de pago OBLIGATORIO** al momento de enviar la reserva (Fase 2). Se sube a Supabase Storage y la reserva pendiente queda enlazada a su URL.
 
 ## 9. Estado actual
 
-- ✅ **Fase 1 completa** (28 may 2026). Supabase: 10 tablas + RLS para 4 roles + 2 posadas, 4 apartamentos, 4 temporadas, 3 precios conocidos de Beach baja, 4 usuarios de prueba. Repo en `https://github.com/mcgolemshop-debug/posadas-san-andres`. Verificación 16/16 OK con `node --env-file=.env.local supabase/scripts/verificar-fase1.mjs`.
-- ⏸ Fases 2, 3, 4 esperando aprobación.
+- ✅ **Fase 1 completa** (28 may 2026). Supabase: 10 tablas + RLS para 4 roles + datos confirmados (12 precios, 4 apartamentos con capacidad/característica, estadías mínimas). 4 usuarios de prueba. Repo en `https://github.com/mcgolemshop-debug/posadas-san-andres`. Verificación 16/16 OK con `node --env-file=.env.local supabase/scripts/verificar-fase1.mjs`.
+- 🚧 **Fase 2 en curso** (28 may 2026). Cara pública: home, página de posada, formulario de reserva con cálculo prorrateado, envío crea reserva pendiente con comprobante de pago obligatorio.
+- ⏸ Fases 3, 4 esperando.
