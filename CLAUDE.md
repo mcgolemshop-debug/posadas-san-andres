@@ -125,5 +125,5 @@ Detalle completo en `ESPECIFICACION.md` sección 5.
 
 ## 9. Estado actual
 
-- ✅ Fase 1 en progreso.
-- ⏸ Fases 2, 3, 4 esperando.
+- ✅ **Fase 1 completa** (28 may 2026). Supabase: 10 tablas + RLS para 4 roles + 2 posadas, 4 apartamentos, 4 temporadas, 3 precios conocidos de Beach baja, 4 usuarios de prueba. Repo en `https://github.com/mcgolemshop-debug/posadas-san-andres`. Verificación 16/16 OK con `node --env-file=.env.local supabase/scripts/verificar-fase1.mjs`.
+- ⏸ Fases 2, 3, 4 esperando aprobación.
