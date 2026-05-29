@@ -1,9 +1,10 @@
 // =====================================================================
-// Middleware Next.js: refresca la sesión de Supabase en cada request
+// Proxy Next.js 16: refresca la sesión de Supabase en cada request
 // y protege las rutas /admin/*.
 // =====================================================================
-// Patrón oficial de @supabase/ssr para App Router:
-//   https://supabase.com/docs/guides/auth/server-side/nextjs
+// (En Next.js 16, lo que antes se llamaba "middleware" ahora se llama
+// "proxy" — mismo comportamiento, distinto nombre.)
+// Patrón oficial de @supabase/ssr para App Router.
 //
 // Reglas:
 //   - /admin/login es público (necesario para entrar)
@@ -14,7 +15,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   // Importante: createServerClient debe ir ANTES de cualquier lógica que
