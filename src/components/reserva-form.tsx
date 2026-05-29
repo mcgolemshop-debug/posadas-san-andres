@@ -1,6 +1,9 @@
 'use client';
 
-import { useActionState, useMemo, useState } from 'react';
+import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
+import { DayPicker, type DateRange } from 'react-day-picker';
+import { es } from 'date-fns/locale';
+import { format, addDays, startOfToday } from 'date-fns';
 import {
   CalendarDays,
   Bed,
@@ -11,6 +14,7 @@ import {
   AlertCircle,
   CheckCircle2,
   FileText,
+  XCircle,
 } from 'lucide-react';
 import { calcularPrecioReserva } from '@/lib/pricing/calcular';
 import type {
@@ -18,8 +22,13 @@ import type {
   PrecioInfo,
   TemporadaInfo,
 } from '@/lib/pricing/tipos';
-import { formatoFechaCorta, formatoUSD, hoyISO } from '@/lib/formato';
+import { formatoFechaCorta, formatoUSD } from '@/lib/formato';
 import { enviarReserva, type EstadoEnvio } from '@/app/posada/[slug]/reservar/actions';
+import {
+  fechasOcupadasParaContexto,
+  rangoChocaConOcupadas,
+  type ReservaCalendar,
+} from '@/components/calendario-disponibilidad';
 
 interface ApartamentoLite {
   id: string;
@@ -38,13 +47,13 @@ interface Props {
   apartamentos: ApartamentoLite[];
   temporadas: TemporadaInfo[];
   precios: PrecioInfo[];
+  reservasConfirmadas: ReservaCalendar[];
 }
 
 const OPCIONES_BEACH = [12, 16, 20];
 
-export function ReservaForm({ posada, apartamentos, temporadas, precios }: Props) {
-  const [fechaInicio, setFechaInicio] = useState('');
-  const [fechaFin, setFechaFin] = useState('');
+export function ReservaForm({ posada, apartamentos, temporadas, precios, reservasConfirmadas }: Props) {
+  const [rango, setRango] = useState<DateRange | undefined>(undefined);
   const [modalidad, setModalidad] = useState<ModalidadReserva>(
     posada.tipo_alquiler === 'solo_completa' ? 'completa' : 'apartamento',
   );
@@ -55,6 +64,47 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios }: Props
   const [email, setEmail] = useState('');
   const [notas, setNotas] = useState('');
   const [comprobante, setComprobante] = useState<File | null>(null);
+  const [avisoLimpieza, setAvisoLimpieza] = useState<string | null>(null);
+
+  // Cantidad de meses visibles en el calendario: 1 en móvil, 2 en desktop.
+  // Empezamos en 1 para no causar hydration mismatch.
+  const [numMeses, setNumMeses] = useState(1);
+  useEffect(() => {
+    const actualizar = () => setNumMeses(window.innerWidth >= 768 ? 2 : 1);
+    actualizar();
+    window.addEventListener('resize', actualizar);
+    return () => window.removeEventListener('resize', actualizar);
+  }, []);
+
+  // Fechas en formato YYYY-MM-DD para el cálculo y los hidden inputs
+  const fechaInicio = rango?.from ? format(rango.from, 'yyyy-MM-dd') : '';
+  const fechaFin = rango?.to ? format(rango.to, 'yyyy-MM-dd') : '';
+
+  // Fechas deshabilitadas en función del contexto (modalidad + apto)
+  const fechasOcupadas = useMemo(() => {
+    const ctx =
+      modalidad === 'completa'
+        ? ({ modalidad: 'completa', apartamentoId: null } as const)
+        : ({ modalidad: 'apartamento', apartamentoId: apartamentoId } as const);
+    return fechasOcupadasParaContexto(reservasConfirmadas, ctx, posada.slug);
+  }, [modalidad, apartamentoId, reservasConfirmadas, posada.slug]);
+
+  // Si el cliente cambia modalidad/apto y el rango actual choca → limpiar
+  // Usamos un ref para acceder al rango actual sin disparar el effect en cada render
+  const rangoRef = useRef(rango);
+  rangoRef.current = rango;
+  useEffect(() => {
+    const r = rangoRef.current;
+    if (r?.from && r?.to) {
+      const inicio = format(r.from, 'yyyy-MM-dd');
+      const fin = format(r.to, 'yyyy-MM-dd');
+      if (rangoChocaConOcupadas(inicio, fin, fechasOcupadas)) {
+        setRango(undefined);
+        setAvisoLimpieza('Las fechas que tenías elegidas chocan con esta nueva opción. Por favor vuelve a seleccionar.');
+        setTimeout(() => setAvisoLimpieza(null), 6000);
+      }
+    }
+  }, [fechasOcupadas]);
 
   const [estadoEnvio, formAction, enviando] = useActionState<EstadoEnvio | null, FormData>(
     enviarReserva,
@@ -89,28 +139,51 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios }: Props
   return (
     <form action={formAction} className="grid lg:grid-cols-[1fr_380px] gap-6 lg:gap-8">
       <input type="hidden" name="posada_slug" value={posada.slug} />
+      <input type="hidden" name="fecha_inicio" value={fechaInicio} />
+      <input type="hidden" name="fecha_fin" value={fechaFin} />
 
       {/* Columna izquierda */}
       <div className="space-y-5">
+        {/* Fechas con calendario visual */}
         <Section icon={<CalendarDays className="w-5 h-5" />} titulo="Fechas">
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Llegada (2:00 PM)">
-              <input
-                type="date" name="fecha_inicio" required
-                value={fechaInicio} min={hoyISO()}
-                onChange={(e) => setFechaInicio(e.target.value)}
-                className={inputClass}
-              />
-            </Field>
-            <Field label="Salida (12:00 m)">
-              <input
-                type="date" name="fecha_fin" required
-                value={fechaFin} min={fechaInicio || hoyISO()}
-                onChange={(e) => setFechaFin(e.target.value)}
-                className={inputClass}
-              />
-            </Field>
+          <p className="text-sm text-[var(--foreground-muted)] mb-3">
+            Selecciona el día de llegada y luego el día de salida. Las fechas en{' '}
+            <span className="text-[var(--danger)] font-medium">rojo tachado</span> ya están ocupadas.
+          </p>
+
+          <div className="bg-white border border-[var(--border)] rounded-xl p-3 sm:p-4 inline-block w-full overflow-x-auto">
+            <DayPicker
+              mode="range"
+              selected={rango}
+              onSelect={setRango}
+              disabled={[
+                { before: addDays(startOfToday(), 1) }, // no hoy ni atrás (llegada mínimo mañana)
+                ...fechasOcupadas.map((d) => ({ from: d, to: d })),
+              ]}
+              numberOfMonths={numMeses}
+              startMonth={new Date()}
+              locale={es}
+              showOutsideDays={false}
+            />
           </div>
+
+          {/* Resumen del rango elegido */}
+          {fechaInicio && fechaFin && (
+            <div className="mt-3 flex items-center gap-2 text-sm text-[var(--foreground)]">
+              <CheckCircle2 className="w-4 h-4 text-[var(--success)]" />
+              <span>
+                <strong>{formatoFechaCorta(fechaInicio)}</strong> (check-in 2:00 PM) →{' '}
+                <strong>{formatoFechaCorta(fechaFin)}</strong> (check-out 12:00 m)
+              </span>
+            </div>
+          )}
+
+          {avisoLimpieza && (
+            <div className="mt-3 p-3 bg-[var(--warning-light)] border border-[var(--warning)]/30 rounded-lg text-sm text-[var(--warning)] flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>{avisoLimpieza}</span>
+            </div>
+          )}
         </Section>
 
         {posada.tipo_alquiler === 'individual_y_completa' ? (
@@ -151,6 +224,9 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios }: Props
                 </option>
               ))}
             </select>
+            <p className="text-xs text-[var(--foreground-subtle)] mt-2">
+              Al cambiar de apartamento, el calendario se actualiza con las fechas ocupadas de ese apto.
+            </p>
           </Section>
         ) : (
           <input type="hidden" name="apartamento_id" value="" />
@@ -271,7 +347,7 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios }: Props
           {!resultado ? (
             <div className="text-center py-6 text-[var(--foreground-subtle)]">
               <CalendarDays className="w-10 h-10 mx-auto mb-3 opacity-40" />
-              <p className="text-sm">Elige fechas para calcular el precio.</p>
+              <p className="text-sm">Elige fechas en el calendario para ver el precio.</p>
             </div>
           ) : (
             <div className="space-y-3 text-sm">
@@ -316,6 +392,18 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios }: Props
               </div>
             </div>
           )}
+        </div>
+
+        {/* Mini-leyenda del calendario */}
+        <div className="mt-4 bg-[var(--surface-elevated)] border border-[var(--border-subtle)] rounded-xl p-4 text-xs text-[var(--foreground-muted)] space-y-1.5">
+          <p className="flex items-center gap-1.5">
+            <XCircle className="w-3.5 h-3.5 text-[var(--danger)]" />
+            <span>Días tachados = ya reservados</span>
+          </p>
+          <p className="flex items-center gap-1.5">
+            <span className="inline-block w-3.5 h-3.5 rounded bg-[var(--primary)]" />
+            <span>Días en azul = tu rango seleccionado</span>
+          </p>
         </div>
 
         <p className="text-xs text-[var(--foreground-subtle)] mt-4 px-2 text-center leading-relaxed">

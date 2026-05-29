@@ -12,9 +12,11 @@ import {
   Star,
   Calendar,
   ImageIcon,
+  CalendarDays,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { formatoUSD } from '@/lib/formato';
+import { CalendarioDisponibilidad } from '@/components/calendario-disponibilidad';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,6 +65,15 @@ export default async function PosadaPage({
     .eq('posada_id', posada.id)
     .eq('activo', true)
     .order('orden');
+
+  // Reservas confirmadas a futuro para mostrar disponibilidad
+  const hoyISO = new Date().toISOString().slice(0, 10);
+  const { data: reservasConfirmadas } = await supabase
+    .from('reservas')
+    .select('fecha_inicio, fecha_fin, modalidad, apartamento_id')
+    .eq('posada_id', posada.id)
+    .eq('estado', 'confirmada')
+    .gte('fecha_fin', hoyISO);
 
   const preciosPosada = preciosRes.data ?? [];
   const precioMin =
@@ -199,6 +210,29 @@ export default async function PosadaPage({
             </div>
           </section>
         )}
+
+        {/* =====================  DISPONIBILIDAD  ===================== */}
+        <section>
+          <SectionTitle eyebrow="Antes de reservar" titulo="Disponibilidad próxima" />
+          <p className="text-[var(--foreground-muted)] mb-6 max-w-3xl flex items-center gap-2">
+            <CalendarDays className="w-4 h-4 text-[var(--primary)]" />
+            Las fechas en rojo ya están reservadas.
+            {esConfort && ' Cambia la opción de abajo para ver disponibilidad de toda la posada o de un apartamento específico.'}
+          </p>
+          <CalendarioDisponibilidad
+            reservas={(reservasConfirmadas ?? []).map((r) => ({
+              fecha_inicio: r.fecha_inicio as string,
+              fecha_fin: r.fecha_fin as string,
+              modalidad: r.modalidad as 'apartamento' | 'completa',
+              apartamento_id: r.apartamento_id as string | null,
+            }))}
+            apartamentos={(apartamentos ?? []).map((a) => ({
+              id: a.id as string,
+              nombre: a.nombre as string,
+            }))}
+            posadaSlug={posada.slug as 'confort' | 'beach'}
+          />
+        </section>
 
         {/* =====================  AMENIDADES  ===================== */}
         <section>

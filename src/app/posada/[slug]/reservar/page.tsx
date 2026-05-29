@@ -50,6 +50,15 @@ export default async function ReservarPage({
   const posada = posadaRes.data;
   if (!posada) notFound();
 
+  // Reservas confirmadas a futuro de esta posada (para bloquear fechas en el calendario)
+  const hoyISO = new Date().toISOString().slice(0, 10);
+  const { data: reservasConfirmadas } = await supabase
+    .from('reservas')
+    .select('fecha_inicio, fecha_fin, modalidad, apartamento_id')
+    .eq('posada_id', posada.id)
+    .eq('estado', 'confirmada')
+    .gte('fecha_fin', hoyISO);
+
   const aptosPosada =
     posada.slug === 'confort'
       ? (aptosRes.data ?? []).filter((a) => a.posada_id === posada.id)
@@ -107,6 +116,12 @@ export default async function ReservarPage({
             num_personas: p.num_personas as number | null,
             precio_usd: Number(p.precio_usd),
             activo: p.activo as boolean,
+          }))}
+          reservasConfirmadas={(reservasConfirmadas ?? []).map((r) => ({
+            fecha_inicio: r.fecha_inicio as string,
+            fecha_fin: r.fecha_fin as string,
+            modalidad: r.modalidad as 'apartamento' | 'completa',
+            apartamento_id: r.apartamento_id as string | null,
           }))}
         />
       </div>

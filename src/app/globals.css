@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "react-day-picker/style.css";
 
 /* =====================================================================
    Paleta "Costa cinematográfica" — Posadas San Andrés
@@ -138,4 +139,110 @@ h1, h2, h3, h4, .font-display {
   background-image:
     radial-gradient(at 0% 0%, rgba(6, 182, 212, 0.08), transparent 50%),
     radial-gradient(at 100% 100%, rgba(251, 113, 133, 0.08), transparent 50%);
+}
+
+/* =====================================================================
+   react-day-picker — adaptado a la paleta Costa cinematográfica
+   ===================================================================== */
+.rdp-root {
+  --rdp-accent-color: var(--primary);
+  --rdp-accent-background-color: var(--primary-light);
+  --rdp-day-height: 2.5rem;
+  --rdp-day-width: 2.5rem;
+  --rdp-day_button-height: 2.5rem;
+  --rdp-day_button-width: 2.5rem;
+  --rdp-day_button-border-radius: 0.625rem;
+  --rdp-selected-border: 2px solid var(--primary);
+  --rdp-disabled-opacity: 0.35;
+  --rdp-outside-opacity: 0.3;
+  --rdp-today-color: var(--accent-hover);
+  --rdp-weekday-text-color: var(--foreground-subtle);
+  --rdp-weekday-text-transform: uppercase;
+  --rdp-nav_button-height: 2.25rem;
+  --rdp-nav_button-width: 2.25rem;
+  --rdp-months-gap: 1.5rem;
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+.rdp-month_caption {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+  padding-bottom: 0.5rem;
+}
+
+.rdp-weekday {
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+}
+
+.rdp-day_button {
+  border: 1px solid transparent;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  font-weight: 500;
+}
+
+.rdp-day_button:hover:not([disabled]) {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.rdp-selected .rdp-day_button {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  font-weight: 600;
+}
+
+.rdp-range_start .rdp-day_button,
+.rdp-range_end .rdp-day_button {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.rdp-range_middle .rdp-day_button {
+  background: var(--primary-light);
+  color: var(--primary);
+  border-color: transparent;
+  border-radius: 0;
+}
+
+/* Día ocupado (disabled): tachado con línea + fondo rojizo suave */
+.rdp-disabled .rdp-day_button {
+  position: relative;
+  background: var(--danger-light);
+  color: var(--danger);
+  cursor: not-allowed;
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: var(--danger);
+  opacity: 1;
+}
+
+.rdp-today:not(.rdp-selected) .rdp-day_button {
+  color: var(--accent-hover);
+  font-weight: 700;
+}
+
+.rdp-nav button {
+  border-radius: 9999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--primary);
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.rdp-nav button:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.rdp-day_button[disabled] {
+  cursor: not-allowed;
 }
