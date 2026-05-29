@@ -1,11 +1,23 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Bed,
+  Car,
+  Waves,
+  Users,
+  Sun,
+  CheckCircle2,
+  Star,
+  Calendar,
+  ImageIcon,
+} from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { formatoUSD } from '@/lib/formato';
 
-// Render dinámico porque leemos de Supabase
 export const dynamic = 'force-dynamic';
 
-// Generamos metadata por slug
 export async function generateMetadata({
   params,
 }: {
@@ -18,7 +30,6 @@ export async function generateMetadata({
     .select('nombre, descripcion')
     .eq('slug', slug)
     .single();
-
   if (!data) return { title: 'Posada no encontrada' };
   return { title: data.nombre, description: data.descripcion ?? undefined };
 }
@@ -31,164 +42,256 @@ export default async function PosadaPage({
   const { slug } = await params;
   const supabase = await createClient();
 
-  // Leemos en paralelo: posada + apartamentos + precios
-  const [posadaRes, aptosRes, preciosRes] = await Promise.all([
+  const [posadaRes, preciosRes] = await Promise.all([
     supabase
       .from('posadas')
-      .select('id, slug, nombre, descripcion, tipo_alquiler, foto_portada, galeria_urls')
+      .select('id, slug, nombre, descripcion, tipo_alquiler')
       .eq('slug', slug)
       .eq('activa', true)
       .maybeSingle(),
     supabase
-      .from('apartamentos')
-      .select('id, nombre, caracteristica, capacidad, foto_portada, orden')
-      .order('orden'),
-    supabase
       .from('precios')
-      .select('precio_usd, modalidad, num_personas, temporada_id'),
+      .select('precio_usd, modalidad, num_personas'),
   ]);
 
   const posada = posadaRes.data;
   if (!posada) notFound();
 
-  // Filtrar apartamentos de ESTA posada (la tabla ya vino completa pero RLS y simpleza la dejamos así)
-  const { data: aptosPosada } = await supabase
+  const { data: apartamentos } = await supabase
     .from('apartamentos')
-    .select('id, nombre, caracteristica, capacidad, foto_portada, orden')
+    .select('id, nombre, caracteristica, capacidad, orden')
     .eq('posada_id', posada.id)
     .eq('activo', true)
     .order('orden');
 
-  const apartamentos = aptosPosada ?? [];
-  const preciosPosada = (preciosRes.data ?? []);
-
-  const esConfort = posada.slug === 'confort';
-  const esBeach = posada.slug === 'beach';
-
-  // Resumen de precios para el badge "Desde $X / noche"
+  const preciosPosada = preciosRes.data ?? [];
   const precioMin =
     preciosPosada.length > 0
       ? Math.min(...preciosPosada.map((p) => Number(p.precio_usd)))
       : null;
-  const precioMax =
-    preciosPosada.length > 0
-      ? Math.max(...preciosPosada.map((p) => Number(p.precio_usd)))
-      : null;
+
+  const esConfort = posada.slug === 'confort';
+  const esBeach = posada.slug === 'beach';
+
+  // Styling por posada
+  const theme = esBeach
+    ? {
+        heroFrom: 'from-cyan-700',
+        heroVia: 'via-sky-800',
+        heroTo: 'to-blue-900',
+        accentBg: 'bg-[var(--secondary-light)]',
+        accentText: 'text-[var(--secondary-hover)]',
+        chipIcon: <Waves className="w-3.5 h-3.5" />,
+      }
+    : {
+        heroFrom: 'from-amber-600',
+        heroVia: 'via-orange-700',
+        heroTo: 'to-rose-900',
+        accentBg: 'bg-[var(--accent-light)]',
+        accentText: 'text-[var(--accent-hover)]',
+        chipIcon: <Sun className="w-3.5 h-3.5" />,
+      };
 
   return (
     <div>
-      {/* Hero */}
-      <section
-        className={`text-white ${
-          esBeach
-            ? 'bg-gradient-to-br from-cyan-700 to-blue-900'
-            : 'bg-gradient-to-br from-amber-700 to-orange-900'
-        }`}
-      >
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-16 sm:py-20">
+      {/* =====================  HERO  ===================== */}
+      <section className={`relative overflow-hidden text-white bg-gradient-to-br ${theme.heroFrom} ${theme.heroVia} ${theme.heroTo}`}>
+        <div className="absolute inset-0 bg-grain" />
+        <div className="absolute -bottom-32 -right-32 w-[28rem] h-[28rem] rounded-full bg-white/5 blur-3xl" />
+
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 py-16 sm:py-24">
           <Link
             href="/"
-            className="inline-flex items-center gap-1 text-white/80 hover:text-white text-sm mb-6"
+            className="inline-flex items-center gap-1.5 text-white/80 hover:text-white text-sm mb-8 transition-colors"
           >
-            <span aria-hidden>←</span> Volver
+            <ArrowLeft className="w-4 h-4" /> Volver al inicio
           </Link>
-          <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight mb-4">
-            {posada.nombre}
-          </h1>
-          <p className="text-lg sm:text-xl text-white/85 max-w-3xl leading-relaxed">
-            {posada.descripcion}
-          </p>
-          {precioMin && (
-            <p className="mt-6 text-white/75 text-sm">
-              Desde <span className="text-2xl font-semibold text-white">${precioMin}</span>{' '}
-              / noche · hasta ${precioMax} en temporadas altas
-            </p>
-          )}
+
+          <div className="grid lg:grid-cols-[1fr_auto] gap-8 items-end">
+            <div>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 text-xs uppercase tracking-widest mb-5">
+                {theme.chipIcon} {esBeach ? 'Frente al mar' : 'Posada de apartamentos'}
+              </span>
+              <h1 className="font-display text-4xl sm:text-6xl leading-[1.05] mb-5">
+                {posada.nombre}
+              </h1>
+              <p className="text-lg text-white/85 max-w-2xl leading-relaxed">
+                {posada.descripcion}
+              </p>
+            </div>
+
+            {precioMin && (
+              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 min-w-[200px] text-center">
+                <p className="text-xs uppercase tracking-widest text-white/70 mb-1">Desde</p>
+                <p className="font-display text-4xl text-white">{formatoUSD(precioMin)}</p>
+                <p className="text-xs text-white/70">por noche</p>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12">
-        {/* Galería placeholder */}
-        <section className="mb-12">
-          <h2 className="text-xl font-semibold mb-4">Galería</h2>
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-16 space-y-16">
+        {/* =====================  GALERÍA  ===================== */}
+        <section>
+          <SectionTitle eyebrow="Conoce el espacio" titulo="Galería" />
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
-                className={`aspect-square rounded-lg ${
-                  esBeach ? 'bg-cyan-100' : 'bg-amber-100'
-                } flex items-center justify-center text-3xl text-[var(--muted)]`}
+                className={`aspect-square rounded-xl border border-[var(--border-subtle)] ${theme.accentBg} flex items-center justify-center text-[var(--foreground-subtle)]`}
               >
-                {esBeach ? '🌊' : '🏖️'}
+                <ImageIcon className="w-8 h-8" />
               </div>
             ))}
           </div>
-          <p className="text-xs text-[var(--muted)] mt-2 italic">
-            Fotos reales próximamente.
+          <p className="text-xs text-[var(--foreground-subtle)] mt-3 italic text-center">
+            Fotos reales próximamente. Mientras tanto, espacios placeholder.
           </p>
         </section>
 
-        {/* Apartamentos (solo Confort) */}
-        {esConfort && apartamentos.length > 0 && (
-          <section className="mb-12">
-            <h2 className="text-xl font-semibold mb-4">Apartamentos</h2>
-            <p className="text-[var(--muted)] mb-6">
-              Puedes reservar uno solo o la posada completa (los 4 apartamentos).
+        {/* =====================  APARTAMENTOS (Confort) ===================== */}
+        {esConfort && apartamentos && apartamentos.length > 0 && (
+          <section>
+            <SectionTitle eyebrow="Distribución" titulo="Los 4 apartamentos" />
+            <p className="text-[var(--foreground-muted)] mb-8 max-w-3xl">
+              Reserva uno solo o la posada completa (los 4 apartamentos juntos).
               En diciembre y Semana Santa solo se alquila completa.
             </p>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {apartamentos.map((a) => (
-                <div
-                  key={a.id}
-                  className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4"
-                >
-                  <p className="font-semibold text-lg mb-1">{a.nombre}</p>
-                  <p className="text-sm text-[var(--muted)]">
-                    Hasta {a.capacidad} personas
-                  </p>
-                  <p className="text-sm text-[var(--accent)] mt-2 capitalize">
-                    {a.caracteristica === 'piscina' && '🏊 Salida a la piscina'}
-                    {a.caracteristica === 'garage' && '🚗 Salida al garage'}
-                  </p>
-                </div>
+                <ApartamentoCard
+                  key={a.id as string}
+                  nombre={a.nombre as string}
+                  caracteristica={a.caracteristica as string | null}
+                  capacidad={a.capacidad as number | null}
+                />
               ))}
             </div>
           </section>
         )}
 
-        {/* Capacidad Beach */}
+        {/* =====================  BEACH — Capacidad ===================== */}
         {esBeach && (
-          <section className="mb-12">
-            <h2 className="text-xl font-semibold mb-4">Capacidad y modalidad</h2>
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
-              <p className="text-[var(--foreground)] mb-3">
-                <strong>Casa completa para hasta 20 personas.</strong> Siempre se alquila completa,
-                no por habitaciones.
-              </p>
-              <p className="text-sm text-[var(--muted)]">
-                En temporada baja el precio depende del número de personas:
-                <br />
-                12 pers → $180 · 16 pers → $200 · 20 pers → $250 por noche.
-                <br />
-                En temporadas altas el precio es plano: $300 (alta) o $325 (Navidad).
-              </p>
+          <section>
+            <SectionTitle eyebrow="Capacidad" titulo="Pensada para grupos grandes" />
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-8 sm:p-10 shadow-sm">
+              <div className="grid sm:grid-cols-[1fr_2fr] gap-8 items-center">
+                <div className="text-center">
+                  <p className="font-display text-7xl text-[var(--primary)]">20</p>
+                  <p className="text-sm uppercase tracking-widest text-[var(--foreground-muted)] mt-1">personas</p>
+                  <p className="text-xs text-[var(--foreground-subtle)] mt-3">2 pisos · casa completa</p>
+                </div>
+                <div className="space-y-3 text-sm">
+                  <p className="text-[var(--foreground-muted)]">
+                    En temporada <strong>baja</strong> el precio se ajusta a tu grupo:
+                  </p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <Tarifa pax={12} usd={180} />
+                    <Tarifa pax={16} usd={200} />
+                    <Tarifa pax={20} usd={250} />
+                  </div>
+                  <p className="text-[var(--foreground-muted)] mt-3">
+                    En <strong>alta</strong> el precio es plano: $300 (ago–sep) y $325 (Navidad).
+                  </p>
+                </div>
+              </div>
             </div>
           </section>
         )}
 
-        {/* CTA reservar */}
-        <section className="text-center py-8">
-          <Link
-            href={`/posada/${posada.slug}/reservar`}
-            className="inline-block bg-[var(--primary)] hover:bg-[var(--primary-soft)] text-white font-semibold px-8 py-3 rounded-lg shadow-md transition-colors"
-          >
-            Reservar fechas
-          </Link>
-          <p className="text-sm text-[var(--muted)] mt-3">
-            Confirmamos manualmente cada reserva tras verificar el pago.
-          </p>
+        {/* =====================  AMENIDADES  ===================== */}
+        <section>
+          <SectionTitle eyebrow="Lo que incluye" titulo="Amenidades" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <Amenidad icon={<Waves className="w-5 h-5" />} label="Cerca del mar" />
+            <Amenidad icon={<Car className="w-5 h-5" />} label={esConfort ? 'Garage privado' : 'Estacionamiento'} />
+            <Amenidad icon={<Sun className="w-5 h-5" />} label="Clima cálido" />
+            <Amenidad icon={<CheckCircle2 className="w-5 h-5" />} label="Pago seguro" />
+          </div>
+        </section>
+
+        {/* =====================  CTA  ===================== */}
+        <section className="bg-gradient-to-br from-[var(--primary)] to-[var(--primary-hover)] rounded-3xl p-8 sm:p-12 text-center text-white relative overflow-hidden">
+          <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-[var(--accent)]/20 blur-3xl" />
+          <div className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full bg-[var(--secondary)]/20 blur-3xl" />
+          <div className="relative">
+            <Star className="w-8 h-8 text-[var(--accent)] mx-auto mb-3" fill="currentColor" />
+            <h2 className="font-display text-3xl sm:text-4xl mb-3">
+              ¿Listo para reservar?
+            </h2>
+            <p className="text-white/85 max-w-xl mx-auto mb-8">
+              Selecciona tus fechas, calcula el total en vivo y envíanos tu solicitud.
+              Te confirmamos en las próximas horas.
+            </p>
+            <Link
+              href={`/posada/${posada.slug}/reservar`}
+              className="inline-flex items-center gap-2 bg-white text-[var(--primary)] hover:bg-[var(--accent)] hover:text-white px-7 py-3.5 rounded-full font-semibold shadow-xl transition-all hover:scale-105"
+            >
+              <Calendar className="w-4 h-4" />
+              Ver fechas y reservar
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
         </section>
       </div>
+    </div>
+  );
+}
+
+/* --------------- Componentes internos --------------- */
+
+function SectionTitle({ eyebrow, titulo }: { eyebrow: string; titulo: string }) {
+  return (
+    <div className="mb-8">
+      <p className="text-xs uppercase tracking-widest text-[var(--accent)] font-semibold mb-2">{eyebrow}</p>
+      <h2 className="font-display text-3xl text-[var(--foreground)]">{titulo}</h2>
+    </div>
+  );
+}
+
+function ApartamentoCard({ nombre, caracteristica, capacidad }: { nombre: string; caracteristica: string | null; capacidad: number | null }) {
+  const esPiscina = caracteristica === 'piscina';
+  const esGarage = caracteristica === 'garage';
+  return (
+    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 hover:shadow-md transition-all hover:-translate-y-0.5">
+      <div className="w-10 h-10 rounded-lg bg-[var(--accent-light)] text-[var(--accent-hover)] flex items-center justify-center mb-3">
+        <Bed className="w-5 h-5" />
+      </div>
+      <p className="font-display text-xl mb-1">{nombre}</p>
+      <p className="flex items-center gap-1 text-sm text-[var(--foreground-muted)] mb-3">
+        <Users className="w-3.5 h-3.5" /> Hasta {capacidad ?? '—'} personas
+      </p>
+      {esPiscina && (
+        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-[var(--secondary-light)] text-[var(--secondary-hover)] font-medium">
+          <Waves className="w-3 h-3" /> Salida a piscina
+        </span>
+      )}
+      {esGarage && (
+        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-[var(--accent-light)] text-[var(--accent-hover)] font-medium">
+          <Car className="w-3 h-3" /> Salida a garage
+        </span>
+      )}
+    </div>
+  );
+}
+
+function Tarifa({ pax, usd }: { pax: number; usd: number }) {
+  return (
+    <div className="bg-[var(--background)] border border-[var(--border)] rounded-lg p-3 text-center">
+      <p className="font-display text-2xl text-[var(--primary)]">${usd}</p>
+      <p className="text-xs text-[var(--foreground-muted)]">{pax} pers / noche</p>
+    </div>
+  );
+}
+
+function Amenidad({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div className="flex flex-col items-center gap-2 p-4 bg-[var(--surface)] border border-[var(--border-subtle)] rounded-xl">
+      <div className="w-10 h-10 rounded-full bg-[var(--primary-light)] text-[var(--primary)] flex items-center justify-center">
+        {icon}
+      </div>
+      <span className="text-xs sm:text-sm text-center text-[var(--foreground-muted)] font-medium">{label}</span>
     </div>
   );
 }

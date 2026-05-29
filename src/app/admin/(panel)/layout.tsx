@@ -1,9 +1,10 @@
 import Link from 'next/link';
+import { Waves } from 'lucide-react';
 import { getSesionAdminEstricto, type RolUsuario } from '@/lib/auth/session';
 import { AdminNav } from '@/components/admin-nav';
+import { AdminSidebarMobile } from '@/components/admin-sidebar-mobile';
 import { LogoutButton } from '@/components/logout-button';
 
-// Render dinámico siempre — depende de la sesión
 export const dynamic = 'force-dynamic';
 
 export default async function PanelLayout({
@@ -11,49 +12,80 @@ export default async function PanelLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Esto redirige a /admin/login si no hay sesión
   const sesion = await getSesionAdminEstricto();
+  const iniciales = sesion.perfil.nombre
+    .split(' ')
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header admin */}
-      <header className="border-b border-[var(--border)] bg-[var(--surface)]">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
-          <Link href="/admin" className="flex items-baseline gap-1">
-            <span className="text-lg font-semibold text-[var(--primary)]">
-              Posadas
-            </span>
-            <span className="text-lg font-light text-[var(--accent)]">San Andrés</span>
-            <span className="ml-2 text-xs uppercase tracking-wide text-[var(--muted)] border border-[var(--border)] px-2 py-0.5 rounded">
-              Admin
-            </span>
-          </Link>
+    <div className="min-h-screen bg-[var(--background)] lg:grid lg:grid-cols-[270px_1fr]">
+      {/* ============ SIDEBAR (desktop) ============ */}
+      <aside className="hidden lg:flex flex-col bg-[var(--surface)] border-r border-[var(--border)] sticky top-0 h-screen">
+        {/* Logo */}
+        <Link href="/admin" className="flex items-center gap-2.5 p-5 border-b border-[var(--border-subtle)]">
+          <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--secondary)] flex items-center justify-center text-white shadow">
+            <Waves className="w-5 h-5" strokeWidth={2.25} />
+          </span>
+          <span className="flex items-baseline gap-1">
+            <span className="font-display text-lg font-semibold text-[var(--primary)]">Posadas</span>
+            <span className="font-display text-lg italic text-[var(--accent)]">San Andrés</span>
+          </span>
+        </Link>
 
-          <div className="flex items-center gap-3 text-sm">
-            <span className="hidden sm:inline text-[var(--muted)]">
-              {sesion.perfil.nombre}{' '}
-              <span className="text-[var(--accent)] font-medium">
-                · {etiquetaRol(sesion.perfil.rol)}
-              </span>
-            </span>
-            <LogoutButton />
-          </div>
-        </div>
-
-        {/* Nav secundaria */}
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 pb-3">
+        {/* Nav scrollable */}
+        <div className="flex-1 overflow-y-auto py-3">
           <AdminNav rol={sesion.perfil.rol} />
         </div>
-      </header>
 
-      {/* Contenido */}
-      <main className="flex-1 mx-auto max-w-7xl w-full px-4 sm:px-6 py-8">
-        {children}
-      </main>
+        {/* Usuario abajo */}
+        <div className="p-4 border-t border-[var(--border-subtle)]">
+          <div className="flex items-center gap-3 mb-3 px-2">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--secondary)] flex items-center justify-center text-white font-semibold text-sm shrink-0">
+              {iniciales || '?'}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-[var(--foreground)] truncate">
+                {sesion.perfil.nombre}
+              </p>
+              <p className="text-xs text-[var(--foreground-subtle)]">{etiquetaRol(sesion.perfil.rol)}</p>
+            </div>
+          </div>
+          <LogoutButton />
+        </div>
+      </aside>
 
-      <footer className="border-t border-[var(--border)] py-4 text-center text-xs text-[var(--muted)]">
-        Panel administrativo · Posadas San Andrés
-      </footer>
+      {/* ============ MAIN ============ */}
+      <div className="flex flex-col min-w-0">
+        {/* Header móvil */}
+        <header className="lg:hidden sticky top-0 z-20 bg-[var(--surface)]/90 backdrop-blur border-b border-[var(--border-subtle)] px-4 py-3 flex items-center justify-between">
+          <Link href="/admin" className="flex items-center gap-2">
+            <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--primary)] to-[var(--secondary)] flex items-center justify-center text-white">
+              <Waves className="w-4 h-4" />
+            </span>
+            <span className="font-display text-base font-semibold text-[var(--primary)]">Posadas</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--foreground-muted)] hidden sm:inline">
+              {etiquetaRol(sesion.perfil.rol)}
+            </span>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--secondary)] flex items-center justify-center text-white text-xs font-semibold">
+              {iniciales || '?'}
+            </div>
+            <AdminSidebarMobile rol={sesion.perfil.rol} />
+          </div>
+        </header>
+
+        <main className="flex-1 px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
+          {children}
+        </main>
+
+        <footer className="border-t border-[var(--border-subtle)] py-4 text-center text-xs text-[var(--foreground-subtle)]">
+          Panel administrativo · Posadas San Andrés
+        </footer>
+      </div>
     </div>
   );
 }

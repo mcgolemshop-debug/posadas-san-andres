@@ -1,3 +1,4 @@
+import { LogOut } from 'lucide-react';
 import { cerrarSesion } from '@/app/admin/login/actions';
 
 export function LogoutButton() {
@@ -5,9 +6,10 @@ export function LogoutButton() {
     <form action={cerrarSesion}>
       <button
         type="submit"
-        className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors px-3 py-1.5 rounded-md hover:bg-[var(--background)]"
+        className="w-full flex items-center gap-2 text-sm text-[var(--foreground-muted)] hover:text-[var(--danger)] transition-colors px-3 py-2 rounded-lg hover:bg-[var(--danger-light)]"
       >
-        Cerrar sesión
+        <LogOut className="w-4 h-4" />
+        <span>Cerrar sesión</span>
       </button>
     </form>
   );

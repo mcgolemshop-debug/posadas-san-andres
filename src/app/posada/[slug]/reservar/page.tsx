@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ArrowLeft, Calendar } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { ReservaForm } from '@/components/reserva-form';
 
@@ -24,7 +25,6 @@ export default async function ReservarPage({
 
   const supabase = await createClient();
 
-  // Cargamos todo lo que el formulario necesita para el cálculo en vivo
   const [posadaRes, aptosRes, tempsRes, preciosRes] = await Promise.all([
     supabase
       .from('posadas')
@@ -34,7 +34,7 @@ export default async function ReservarPage({
       .maybeSingle(),
     supabase
       .from('apartamentos')
-      .select('id, nombre, capacidad, caracteristica')
+      .select('id, nombre, capacidad, caracteristica, posada_id')
       .eq('activo', true)
       .order('orden'),
     supabase
@@ -50,61 +50,66 @@ export default async function ReservarPage({
   const posada = posadaRes.data;
   if (!posada) notFound();
 
-  // Filtrar apartamentos de esta posada
   const aptosPosada =
     posada.slug === 'confort'
-      ? (aptosRes.data ?? []).filter(() => true) // todos los de la query (RLS ya filtra)
+      ? (aptosRes.data ?? []).filter((a) => a.posada_id === posada.id)
       : [];
 
-  // El cliente componente quiere datos limpios
   return (
-    <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8 sm:py-12">
-      <Link
-        href={`/posada/${posada.slug}`}
-        className="inline-flex items-center gap-1 text-[var(--primary)] hover:text-[var(--primary-soft)] text-sm mb-4"
-      >
-        <span aria-hidden>←</span> Volver a {posada.nombre}
-      </Link>
+    <div className="bg-[var(--background)] min-h-screen">
+      {/* Hero compacto */}
+      <section className="bg-gradient-to-r from-[var(--primary)] to-[var(--primary-hover)] text-white">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
+          <Link
+            href={`/posada/${posada.slug}`}
+            className="inline-flex items-center gap-1.5 text-white/80 hover:text-white text-sm mb-3 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" /> Volver a {posada.nombre}
+          </Link>
+          <h1 className="font-display text-3xl sm:text-4xl flex items-center gap-3">
+            <Calendar className="w-7 h-7 text-[var(--accent)]" />
+            Reservar en {posada.nombre}
+          </h1>
+          <p className="text-white/75 mt-1">
+            El precio se calcula en vivo mientras ajustas las fechas.
+          </p>
+        </div>
+      </section>
 
-      <h1 className="text-2xl sm:text-3xl font-semibold mb-2">
-        Reservar — {posada.nombre}
-      </h1>
-      <p className="text-[var(--muted)] mb-8">
-        El precio se calcula en vivo a medida que ajustas las fechas.
-      </p>
-
-      <ReservaForm
-        posada={{
-          id: posada.id as string,
-          slug: posada.slug as 'confort' | 'beach',
-          nombre: posada.nombre as string,
-          tipo_alquiler: posada.tipo_alquiler as 'individual_y_completa' | 'solo_completa',
-        }}
-        apartamentos={aptosPosada.map((a) => ({
-          id: a.id as string,
-          nombre: a.nombre as string,
-          capacidad: a.capacidad as number | null,
-          caracteristica: a.caracteristica as string | null,
-        }))}
-        temporadas={(tempsRes.data ?? []).map((t) => ({
-          id: t.id as string,
-          nombre: t.nombre as string,
-          prioridad: t.prioridad as number,
-          estadia_minima_noches: t.estadia_minima_noches as number,
-          fuerza_completa_confort: t.fuerza_completa_confort as boolean,
-          fecha_inicio: t.fecha_inicio as string | null,
-          fecha_fin: t.fecha_fin as string | null,
-          activa: t.activa as boolean,
-        }))}
-        precios={(preciosRes.data ?? []).map((p) => ({
-          posada_id: p.posada_id as string,
-          temporada_id: p.temporada_id as string,
-          modalidad: p.modalidad as 'apartamento' | 'completa',
-          num_personas: p.num_personas as number | null,
-          precio_usd: Number(p.precio_usd),
-          activo: p.activo as boolean,
-        }))}
-      />
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8 sm:py-10">
+        <ReservaForm
+          posada={{
+            id: posada.id as string,
+            slug: posada.slug as 'confort' | 'beach',
+            nombre: posada.nombre as string,
+            tipo_alquiler: posada.tipo_alquiler as 'individual_y_completa' | 'solo_completa',
+          }}
+          apartamentos={aptosPosada.map((a) => ({
+            id: a.id as string,
+            nombre: a.nombre as string,
+            capacidad: a.capacidad as number | null,
+            caracteristica: a.caracteristica as string | null,
+          }))}
+          temporadas={(tempsRes.data ?? []).map((t) => ({
+            id: t.id as string,
+            nombre: t.nombre as string,
+            prioridad: t.prioridad as number,
+            estadia_minima_noches: t.estadia_minima_noches as number,
+            fuerza_completa_confort: t.fuerza_completa_confort as boolean,
+            fecha_inicio: t.fecha_inicio as string | null,
+            fecha_fin: t.fecha_fin as string | null,
+            activa: t.activa as boolean,
+          }))}
+          precios={(preciosRes.data ?? []).map((p) => ({
+            posada_id: p.posada_id as string,
+            temporada_id: p.temporada_id as string,
+            modalidad: p.modalidad as 'apartamento' | 'completa',
+            num_personas: p.num_personas as number | null,
+            precio_usd: Number(p.precio_usd),
+            activo: p.activo as boolean,
+          }))}
+        />
+      </div>
     </div>
   );
 }
