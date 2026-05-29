@@ -10,12 +10,15 @@ interface ItemNav {
   roles: RolUsuario[];
 }
 
-// Solo incluimos los módulos que ya existen en Fase 3.
-// Gastos/Comisiones/Pagos/Nómina/Reportes llegan en Fase 4.
 const ITEMS: ItemNav[] = [
   { href: '/admin', label: 'Inicio', roles: ['dueno', 'conserje', 'vulcanos', 'contador'] },
   { href: '/admin/reservas', label: 'Reservas', roles: ['dueno', 'conserje', 'vulcanos', 'contador'] },
   { href: '/admin/calendario', label: 'Calendario', roles: ['dueno', 'conserje', 'vulcanos', 'contador'] },
+  { href: '/admin/gastos', label: 'Gastos', roles: ['dueno', 'conserje', 'contador'] },
+  { href: '/admin/comisiones', label: 'Comisiones', roles: ['dueno', 'vulcanos', 'conserje', 'contador'] },
+  { href: '/admin/pagos', label: 'Pagos', roles: ['dueno', 'contador'] },
+  { href: '/admin/nomina', label: 'Nómina', roles: ['dueno', 'contador'] },
+  { href: '/admin/reportes', label: 'Reportes', roles: ['dueno', 'contador'] },
   { href: '/admin/usuarios', label: 'Usuarios', roles: ['dueno'] },
   { href: '/admin/posadas', label: 'Posadas y precios', roles: ['dueno'] },
 ];
