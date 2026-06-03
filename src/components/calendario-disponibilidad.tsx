@@ -51,19 +51,23 @@ export function CalendarioDisponibilidad({
   );
 
   const proximas = useMemo(() => {
-    // Top 5 rangos próximos que afectan el contexto
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
+    // NO filtramos por "fecha < hoy" porque el servidor ya nos pasa
+    // solo reservas a futuro (filtrado por gte('fecha_fin', hoyISO) en SSR).
+    // Si filtráramos en el cliente, el resultado dependería de la fecha
+    // del navegador del usuario — y si su reloj está mal o hay un desfase
+    // de timezone, podría excluir reservas que SÍ son futuras.
     return reservas
       .filter((r) => {
-        const fin = new Date(r.fecha_fin + 'T12:00:00Z');
-        if (fin < hoy) return false;
         if (posadaSlug === 'beach') return true;
         if (contexto.modalidad === 'completa') return true;
-        return r.modalidad === 'completa' || r.apartamento_id === contexto.apartamentoId;
+        if (r.modalidad === 'completa') return true;
+        const susAptos: string[] = Array.isArray(r.apartamentos_ids) && r.apartamentos_ids.length > 0
+          ? r.apartamentos_ids
+          : (r.apartamento_id ? [r.apartamento_id] : []);
+        return susAptos.includes(contexto.apartamentoId!);
       })
       .sort((a, b) => a.fecha_inicio.localeCompare(b.fecha_inicio))
-      .slice(0, 5);
+      .slice(0, 8);
   }, [reservas, contexto, posadaSlug]);
 
   return (

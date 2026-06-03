@@ -98,14 +98,14 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
   const fechaFin = rango?.to ? format(rango.to, 'yyyy-MM-dd') : '';
 
   // Lista de PRÓXIMAS reservas que afectan el contexto actual (para mostrar
-  // debajo del calendario, útil en móvil donde el calendario es pequeño)
+  // debajo del calendario, útil en móvil donde el calendario es pequeño).
+  // NOTA: no filtramos por "fin < hoy" porque el servidor ya filtra por
+  // fecha_fin >= hoyISO. Filtrar en el cliente con new Date() depende del
+  // reloj del navegador, lo que causaba que el móvil escondiera reservas
+  // si la fecha del iPhone estaba mal o por desfase de zona horaria.
   const proximasReservasOcupadas = useMemo(() => {
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
     return reservasConfirmadas
       .filter((r) => {
-        const fin = new Date(r.fecha_fin + 'T12:00:00Z');
-        if (fin < hoy) return false;
         if (posada.slug === 'beach') return true;
         if (modalidad === 'completa') return true;
         if (r.modalidad === 'completa') return true;
