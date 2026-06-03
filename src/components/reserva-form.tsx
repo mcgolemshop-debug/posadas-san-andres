@@ -260,6 +260,11 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
             </span>
           </div>
 
+          {/* Diagnóstico visible */}
+          <p className="mt-3 text-xs text-[var(--foreground-subtle)]">
+            En esta posada hay <strong className="text-[var(--foreground)]">{reservasConfirmadas.length}</strong> reserva{reservasConfirmadas.length === 1 ? '' : 's'} confirmada{reservasConfirmadas.length === 1 ? '' : 's'} a futuro.
+          </p>
+
           {/* Lista de próximas fechas ocupadas — visible especialmente en móvil
               donde el calendario es de 1 mes y las fechas tachadas son pequeñas */}
           {proximasReservasOcupadas.length > 0 && (

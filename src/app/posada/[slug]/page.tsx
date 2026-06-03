@@ -21,6 +21,8 @@ import { CalendarioDisponibilidad } from '@/components/calendario-disponibilidad
 import { urlFotoPosada } from '@/lib/storage/fotos';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
 
 export async function generateMetadata({
   params,

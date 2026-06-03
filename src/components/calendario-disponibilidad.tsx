@@ -72,6 +72,13 @@ export function CalendarioDisponibilidad({
 
   return (
     <div>
+      {/* Diagnóstico visible: cuántas reservas confirmadas vienen del servidor.
+          Si esto dice 0 en móvil pero >0 en PC, es problema de caché del
+          navegador. Si dice >0 en ambos pero las fechas no se tachan, es CSS. */}
+      <p className="mb-3 text-xs text-[var(--foreground-subtle)]">
+        Encontradas <strong className="text-[var(--foreground)]">{reservas.length}</strong> reserva{reservas.length === 1 ? '' : 's'} confirmada{reservas.length === 1 ? '' : 's'} a futuro en esta posada.
+      </p>
+
       {/* Filtro Confort */}
       {posadaSlug === 'confort' && apartamentos && apartamentos.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-5">
