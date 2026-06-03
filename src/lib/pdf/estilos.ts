@@ -5,26 +5,14 @@
 // Tipografía: Inter para body, fallback default si no hay Fraunces.
 // =====================================================================
 
-import { StyleSheet, Font } from '@react-pdf/renderer';
+import { StyleSheet } from '@react-pdf/renderer';
 
-// Registramos fuentes Google (descarga remota en tiempo de generación).
-// Helvetica es el fallback default de @react-pdf si fallan.
-Font.register({
-  family: 'Inter',
-  fonts: [
-    { src: 'https://fonts.gstatic.com/s/inter/v18/UcCo3FwrK3iLTcvneQg7Ca725JhhKnNqk4j1ebLhAm8SrXTc2dphjZ0Mn4SC.woff2', fontWeight: 400 },
-    { src: 'https://fonts.gstatic.com/s/inter/v18/UcCo3FwrK3iLTcvneQg7Ca725JhhKnNqk4j1ebLhAm8SrXTc2dphhJ0Mn4SC.woff2', fontWeight: 600 },
-    { src: 'https://fonts.gstatic.com/s/inter/v18/UcCo3FwrK3iLTcvneQg7Ca725JhhKnNqk4j1ebLhAm8SrXTc2dphgZ0Mn4SC.woff2', fontWeight: 700 },
-  ],
-});
-
-Font.register({
-  family: 'Fraunces',
-  fonts: [
-    { src: 'https://fonts.gstatic.com/s/fraunces/v36/6NUg8FuKNHHFmyQEcfWNTtA8tWeJW4PwVwdSI7Zo4-9wpANfqg.woff2', fontWeight: 400 },
-    { src: 'https://fonts.gstatic.com/s/fraunces/v36/6NUg8FuKNHHFmyQEcfWNTtA8tWeJW4PwVwdSI7Zo4-9wpANfqg.woff2', fontWeight: 600, fontStyle: 'italic' },
-  ],
-});
+// Usamos las fuentes built-in de @react-pdf:
+//   - Helvetica (sans) → para body, equivalente a Inter
+//   - Times-Roman (serif) → para títulos, look elegante similar a Fraunces
+// Evitamos descargas de Google Fonts que fallan en serverless de Vercel.
+const FUENTE_SANS = 'Helvetica';
+const FUENTE_SERIF = 'Times-Roman';
 
 // Paleta Costa cinematográfica (sincronizada con globals.css)
 export const COLOR = {
@@ -52,7 +40,7 @@ export const COLOR = {
 
 export const estilos = StyleSheet.create({
   page: {
-    fontFamily: 'Inter',
+    fontFamily: FUENTE_SANS,
     fontSize: 9,
     padding: 36,
     backgroundColor: COLOR.background,
@@ -84,8 +72,7 @@ export const estilos = StyleSheet.create({
   },
   logoText: {
     color: 'white',
-    fontFamily: 'Inter',
-    fontWeight: 700,
+    fontFamily: 'Helvetica-Bold',
     fontSize: 14,
   },
   brandName: {
@@ -94,17 +81,14 @@ export const estilos = StyleSheet.create({
     gap: 2,
   },
   brandNamePrimary: {
-    fontFamily: 'Fraunces',
+    fontFamily: 'Times-Bold',
     fontSize: 18,
-    fontWeight: 600,
     color: COLOR.primary,
   },
   brandNameAccent: {
-    fontFamily: 'Fraunces',
+    fontFamily: 'Times-Italic',
     fontSize: 18,
-    fontWeight: 400,
     color: COLOR.accent,
-    fontStyle: 'italic',
   },
   headerMeta: {
     textAlign: 'right',
@@ -123,9 +107,8 @@ export const estilos = StyleSheet.create({
 
   // Título y subtítulo del reporte
   title: {
-    fontFamily: 'Fraunces',
+    fontFamily: 'Times-Bold',
     fontSize: 24,
-    fontWeight: 600,
     color: COLOR.foreground,
     marginBottom: 4,
   },
@@ -140,9 +123,8 @@ export const estilos = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontFamily: 'Fraunces',
+    fontFamily: 'Times-Bold',
     fontSize: 14,
-    fontWeight: 600,
     color: COLOR.foreground,
     marginBottom: 8,
   },
@@ -169,9 +151,8 @@ export const estilos = StyleSheet.create({
     marginBottom: 4,
   },
   metricValue: {
-    fontFamily: 'Fraunces',
+    fontFamily: 'Times-Bold',
     fontSize: 18,
-    fontWeight: 600,
     color: COLOR.primary,
   },
   metricSub: {
@@ -196,8 +177,8 @@ export const estilos = StyleSheet.create({
     paddingHorizontal: 8,
   },
   tableHeaderCell: {
+    fontFamily: 'Helvetica-Bold',
     fontSize: 7,
-    fontWeight: 700,
     color: COLOR.foregroundMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -219,12 +200,12 @@ export const estilos = StyleSheet.create({
 
   // Badges de estado
   badge: {
+    fontFamily: 'Helvetica-Bold',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
     alignSelf: 'flex-start',
     fontSize: 7,
-    fontWeight: 600,
   },
   badgePendiente: {
     backgroundColor: COLOR.warningLight,

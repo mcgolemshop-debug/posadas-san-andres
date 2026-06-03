@@ -155,7 +155,7 @@ export function ReporteCalendarioDoc({ mes, posadas, generadoEn }: ReporteCalend
                           backgroundColor: esFinde ? COLOR.primaryLight : 'transparent',
                         }}
                       >
-                        <Text style={{ fontSize: 6, fontWeight: 600, color: esFinde ? COLOR.primary : COLOR.foregroundSubtle }}>
+                        <Text style={{ fontSize: 6, fontFamily: 'Helvetica-Bold', color: esFinde ? COLOR.primary : COLOR.foregroundSubtle }}>
                           {INICIALES[ds]}
                         </Text>
                       </View>
@@ -179,7 +179,7 @@ export function ReporteCalendarioDoc({ mes, posadas, generadoEn }: ReporteCalend
                           backgroundColor: esFinde ? COLOR.primaryLight : 'transparent',
                         }}
                       >
-                        <Text style={{ fontSize: 7, fontWeight: 700, color: esFinde ? COLOR.primary : COLOR.foreground }}>
+                        <Text style={{ fontSize: 7, fontFamily: 'Helvetica-Bold', color: esFinde ? COLOR.primary : COLOR.foreground }}>
                           {d}
                         </Text>
                       </View>
@@ -199,7 +199,7 @@ export function ReporteCalendarioDoc({ mes, posadas, generadoEn }: ReporteCalend
                     }}
                   >
                     <View style={{ width: labelWidth, padding: 6, justifyContent: 'center', borderRightWidth: 0.5, borderRightColor: COLOR.borderSubtle }}>
-                      <Text style={{ fontSize: 8, fontWeight: 600 }}>{fila.nombre}</Text>
+                      <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold' }}>{fila.nombre}</Text>
                     </View>
                     {dias.map((d) => {
                       const r = cobertura.get(`${fila.id}:${d}`);
@@ -236,7 +236,7 @@ export function ReporteCalendarioDoc({ mes, posadas, generadoEn }: ReporteCalend
                           }}
                         >
                           {primerDia && (
-                            <Text style={{ fontSize: 5, color: 'white', fontWeight: 700 }}>
+                            <Text style={{ fontSize: 5, color: 'white', fontFamily: 'Helvetica-Bold' }}>
                               {r.cliente_nombre.split(' ')[0].slice(0, 10)}
                             </Text>
                           )}
@@ -254,14 +254,14 @@ export function ReporteCalendarioDoc({ mes, posadas, generadoEn }: ReporteCalend
         {posadas.map((p) =>
           p.reservas.length > 0 ? (
             <View key={`lista-${p.slug}`} style={{ marginTop: 6, marginBottom: 12 }} wrap={false}>
-              <Text style={{ fontSize: 8, fontWeight: 700, color: COLOR.foregroundMuted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: COLOR.foregroundMuted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 {p.nombre} · Reservas confirmadas
               </Text>
               {p.reservas.map((r) => (
                 <View key={r.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                   <View style={{ width: 6, height: 6, backgroundColor: colorPara(r.id), borderRadius: 1 }} />
                   <Text style={{ fontSize: 7, color: COLOR.foreground }}>
-                    {r.fecha_inicio} → {r.fecha_fin} · <Text style={{ fontWeight: 600 }}>{r.cliente_nombre}</Text>
+                    {r.fecha_inicio} → {r.fecha_fin} · <Text style={{ fontFamily: 'Helvetica-Bold' }}>{r.cliente_nombre}</Text>
                     {r.modalidad === 'completa' && <Text style={{ color: COLOR.foregroundMuted }}> (posada completa)</Text>}
                   </Text>
                 </View>

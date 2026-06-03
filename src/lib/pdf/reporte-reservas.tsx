@@ -149,7 +149,7 @@ export function ReporteReservasDoc({ reservas, filtros, generadoEn }: ReporteRes
 
             {reservas.length === 0 && (
               <View style={[estilos.tableRow, { justifyContent: 'center' }]}>
-                <Text style={[estilos.tableCell, { color: COLOR.foregroundSubtle, fontStyle: 'italic' }]}>
+                <Text style={[estilos.tableCell, { color: COLOR.foregroundSubtle, fontFamily: 'Times-Italic' }]}>
                   Sin reservas para los filtros seleccionados.
                 </Text>
               </View>
@@ -166,14 +166,14 @@ export function ReporteReservasDoc({ reservas, filtros, generadoEn }: ReporteRes
                   <Text style={[estilos.tableCell, { width: COL_W.fechas }]}>
                     {fechaLegible(r.fecha_inicio)} → {fechaLegible(r.fecha_fin)}
                   </Text>
-                  <Text style={[estilos.tableCell, { width: COL_W.cliente, fontWeight: 600 }]}>{r.cliente_nombre}</Text>
+                  <Text style={[estilos.tableCell, { width: COL_W.cliente, fontFamily: 'Helvetica-Bold' }]}>{r.cliente_nombre}</Text>
                   <Text style={[estilos.tableCell, { width: COL_W.posada }]}>{r.posada_nombre}</Text>
                   <Text style={[estilos.tableCell, { width: COL_W.modalidad }]}>{modalidadTxt}</Text>
                   <Text style={[estilos.tableCell, { width: COL_W.pers, textAlign: 'center' }]}>{r.num_personas}</Text>
                   <View style={{ width: COL_W.estado }}>
                     <Text style={[estilos.badge, b.style]}>{b.etiq}</Text>
                   </View>
-                  <Text style={[estilos.tableCell, { width: COL_W.total, textAlign: 'right', fontWeight: 600 }]}>
+                  <Text style={[estilos.tableCell, { width: COL_W.total, textAlign: 'right', fontFamily: 'Helvetica-Bold' }]}>
                     {formatoUSD(Number(r.total_usd))}
                   </Text>
                 </View>
