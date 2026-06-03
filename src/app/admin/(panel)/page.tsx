@@ -21,17 +21,24 @@ export default async function DashboardPage() {
   const sesion = await getSesionAdminEstricto();
   const supabase = await createClient();
 
+  // Importante: excluir reservas eliminadas (soft-delete) en todos los conteos
   const [pendientesRes, confirmadasMesRes, totalMesRes] = await Promise.all([
-    supabase.from('reservas').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente'),
+    supabase
+      .from('reservas')
+      .select('id', { count: 'exact', head: true })
+      .eq('estado', 'pendiente')
+      .is('eliminada_at', null),
     supabase
       .from('reservas')
       .select('id', { count: 'exact', head: true })
       .eq('estado', 'confirmada')
+      .is('eliminada_at', null)
       .gte('confirmada_at', primerDiaMes()),
     supabase
       .from('reservas')
       .select('total_usd')
       .eq('estado', 'confirmada')
+      .is('eliminada_at', null)
       .gte('confirmada_at', primerDiaMes()),
   ]);
 

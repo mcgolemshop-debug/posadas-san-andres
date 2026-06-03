@@ -57,6 +57,7 @@ export default async function ReportesPage({ searchParams }: PageProps) {
       .from('reservas')
       .select('id, total_usd, estado')
       .eq('estado', 'confirmada')
+      .is('eliminada_at', null)
       .gte('confirmada_at', `${primerDia}T00:00:00`)
       .lte('confirmada_at', `${ultimoDia}T23:59:59`),
   ]);

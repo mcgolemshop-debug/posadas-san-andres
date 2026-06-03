@@ -53,6 +53,7 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
     .from('reservas')
     .select('id, fecha_inicio, fecha_fin, cliente_nombre, modalidad, apartamento_id, posada_id')
     .eq('estado', 'confirmada')
+    .is('eliminada_at', null)
     .lt('fecha_inicio', primerDiaSiguiente)
     .gt('fecha_fin', primerDiaMes);
 

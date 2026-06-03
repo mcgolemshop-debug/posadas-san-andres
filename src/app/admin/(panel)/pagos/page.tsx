@@ -54,6 +54,7 @@ export default async function PagosPage({ searchParams }: PageProps) {
     .from('reservas')
     .select('id, cliente_nombre, total_usd, fecha_inicio, posadas(nombre)')
     .eq('estado', 'confirmada')
+    .is('eliminada_at', null)
     .order('fecha_inicio', { ascending: false })
     .limit(100);
   const reservasOpts = (reservasConfirmadas ?? []).map((r) => {
