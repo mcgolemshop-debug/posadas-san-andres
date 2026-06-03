@@ -252,8 +252,21 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
             <input
               type="number" name="num_personas"
               min={1} max={modalidad === 'completa' ? 28 : 7}
-              value={numPersonas}
-              onChange={(e) => setNumPersonas(Number(e.target.value))}
+              value={numPersonas > 0 ? numPersonas : ''}
+              placeholder="¿Cuántos vienen?"
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === '') {
+                  setNumPersonas(0); // permite que el campo se vea vacío al borrar
+                } else {
+                  const n = Number(v);
+                  if (!isNaN(n) && n >= 0) setNumPersonas(n);
+                }
+              }}
+              onBlur={(e) => {
+                // Si el campo quedó vacío, volver al mínimo
+                if (e.target.value === '' || Number(e.target.value) < 1) setNumPersonas(1);
+              }}
               className={inputClass}
             />
           )}

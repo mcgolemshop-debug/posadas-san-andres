@@ -15,11 +15,24 @@
 import { Resend } from 'resend';
 import { formatoFechaCorta, formatoUSD } from '@/lib/formato';
 
-// En modo prueba de Resend, solo se puede enviar al email del titular de la cuenta.
-// Orlando creó la cuenta con mcgolemshop@gmail.com, así que ahí van las notificaciones.
-// Cuando se verifique dominio (Fase 4), se podrá enviar también a velasquezorlandodavid@gmail.com.
-const EMAIL_DUENO = 'mcgolemshop@gmail.com';
+// En modo prueba de Resend, solo se puede enviar al email del titular de la cuenta
+// (mcgolemshop@gmail.com). Otros destinatarios serán rechazados por Resend hasta
+// que se verifique un dominio propio.
+//
+// Por eso mantenemos la lista de destinatarios reales en TODOS_DESTINATARIOS y
+// filtramos a los que Resend acepta en este momento. Al verificar dominio
+// (Fase 4), basta con poner RESEND_DOMINIO_VERIFICADO=true y reciben todos.
+const TODOS_DESTINATARIOS = [
+  'mcgolemshop@gmail.com',     // Orlando — owner de la cuenta Resend
+  'leninrpetit@gmail.com',     // Lenin — añadido en Onda 1 (2026)
+];
+const EMAIL_TITULAR_RESEND = 'mcgolemshop@gmail.com';
 const REMITENTE = 'Posadas San Andrés <onboarding@resend.dev>';
+
+function destinatariosNotificacion(): string[] {
+  const dominioVerificado = process.env.RESEND_DOMINIO_VERIFICADO === 'true';
+  return dominioVerificado ? TODOS_DESTINATARIOS : [EMAIL_TITULAR_RESEND];
+}
 
 export interface DatosNotificacion {
   reserva_id: string;
@@ -95,10 +108,11 @@ export async function notificarDuenoNuevaReserva(datos: DatosNotificacion): Prom
 </html>
   `.trim();
 
+  const destinos = destinatariosNotificacion();
   try {
     const { error } = await resend.emails.send({
       from: REMITENTE,
-      to: EMAIL_DUENO,
+      to: destinos,
       subject,
       html,
       replyTo: datos.cliente_email,
@@ -109,7 +123,7 @@ export async function notificarDuenoNuevaReserva(datos: DatosNotificacion): Prom
       return;
     }
 
-    console.log(`[notificar-dueno] Email enviado a ${EMAIL_DUENO} para reserva ${datos.reserva_id}`);
+    console.log(`[notificar-dueno] Email enviado a ${destinos.join(', ')} para reserva ${datos.reserva_id}`);
   } catch (err) {
     console.error('[notificar-dueno] excepción al enviar:', err);
   }
