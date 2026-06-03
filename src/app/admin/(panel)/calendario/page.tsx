@@ -88,6 +88,15 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
           >
             Siguiente →
           </Link>
+          <a
+            href={`/admin/calendario/pdf?mes=${mes}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white px-3 py-1.5 rounded-md text-sm font-medium"
+            title="Descargar calendario en PDF"
+          >
+            📥 PDF
+          </a>
         </div>
       </div>
 

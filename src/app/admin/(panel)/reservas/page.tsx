@@ -46,11 +46,20 @@ export default async function ReservasPage({ searchParams }: PageProps) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <h1 className="text-2xl font-semibold">Reservas</h1>
-        <span className="text-sm text-[var(--muted)]">
-          {reservas?.length ?? 0} {reservas?.length === 1 ? 'reserva' : 'reservas'}
-        </span>
+        <div className="flex items-center gap-3 text-sm text-[var(--muted)]">
+          <span>{reservas?.length ?? 0} {reservas?.length === 1 ? 'reserva' : 'reservas'}</span>
+          <a
+            href={`/admin/reservas/pdf?${new URLSearchParams(Object.entries(filtros).filter(([, v]) => !!v) as [string, string][]).toString()}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white px-3 py-1.5 rounded-md text-xs font-medium"
+            title="Descargar reporte PDF de las reservas filtradas"
+          >
+            📥 Descargar PDF
+          </a>
+        </div>
       </div>
 
       <ReservasFiltros />
