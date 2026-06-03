@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Calendar } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { ReservaForm } from '@/components/reserva-form';
 
 export const dynamic = 'force-dynamic';
@@ -124,12 +125,18 @@ export default async function ReservarPage({
             precio_usd: Number(p.precio_usd),
             activo: p.activo as boolean,
           }))}
-          reservasConfirmadas={(reservasConfirmadas ?? []).map((r) => ({
-            fecha_inicio: r.fecha_inicio as string,
-            fecha_fin: r.fecha_fin as string,
+          reservasConfirmadas={((reservasConfirmadas ?? []) as Array<{
+            fecha_inicio: string;
+            fecha_fin: string;
+            modalidad: string;
+            apartamento_id: string | null;
+            apartamentos_ids: string[] | null;
+          }>).map((r) => ({
+            fecha_inicio: r.fecha_inicio,
+            fecha_fin: r.fecha_fin,
             modalidad: r.modalidad as 'apartamento' | 'completa',
-            apartamento_id: r.apartamento_id as string | null,
-            apartamentos_ids: (r.apartamentos_ids as string[] | null) ?? null,
+            apartamento_id: r.apartamento_id ?? null,
+            apartamentos_ids: r.apartamentos_ids ?? null,
           }))}
         />
       </div>
