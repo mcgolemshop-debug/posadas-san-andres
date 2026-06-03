@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { DayPicker } from 'react-day-picker';
 import { es } from 'date-fns/locale';
-import { CheckCircle2, XCircle, Info } from 'lucide-react';
+import { XCircle } from 'lucide-react';
 
 export interface ReservaCalendar {
   fecha_inicio: string;  // YYYY-MM-DD
@@ -50,35 +50,8 @@ export function CalendarioDisponibilidad({
     [reservas, contexto, posadaSlug],
   );
 
-  const proximas = useMemo(() => {
-    // NO filtramos por "fecha < hoy" porque el servidor ya nos pasa
-    // solo reservas a futuro (filtrado por gte('fecha_fin', hoyISO) en SSR).
-    // Si filtráramos en el cliente, el resultado dependería de la fecha
-    // del navegador del usuario — y si su reloj está mal o hay un desfase
-    // de timezone, podría excluir reservas que SÍ son futuras.
-    return reservas
-      .filter((r) => {
-        if (posadaSlug === 'beach') return true;
-        if (contexto.modalidad === 'completa') return true;
-        if (r.modalidad === 'completa') return true;
-        const susAptos: string[] = Array.isArray(r.apartamentos_ids) && r.apartamentos_ids.length > 0
-          ? r.apartamentos_ids
-          : (r.apartamento_id ? [r.apartamento_id] : []);
-        return susAptos.includes(contexto.apartamentoId!);
-      })
-      .sort((a, b) => a.fecha_inicio.localeCompare(b.fecha_inicio))
-      .slice(0, 8);
-  }, [reservas, contexto, posadaSlug]);
-
   return (
     <div>
-      {/* Diagnóstico visible: cuántas reservas confirmadas vienen del servidor.
-          Si esto dice 0 en móvil pero >0 en PC, es problema de caché del
-          navegador. Si dice >0 en ambos pero las fechas no se tachan, es CSS. */}
-      <p className="mb-3 text-xs text-[var(--foreground-subtle)]">
-        Encontradas <strong className="text-[var(--foreground)]">{reservas.length}</strong> reserva{reservas.length === 1 ? '' : 's'} confirmada{reservas.length === 1 ? '' : 's'} a futuro en esta posada.
-      </p>
-
       {/* Filtro Confort */}
       {posadaSlug === 'confort' && apartamentos && apartamentos.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-5">
@@ -133,34 +106,6 @@ export function CalendarioDisponibilidad({
         </span>
       </div>
 
-      {/* Próximas fechas ocupadas */}
-      {proximas.length > 0 ? (
-        <div className="mt-6 bg-[var(--surface-elevated)] border border-[var(--border-subtle)] rounded-xl p-4">
-          <p className="text-xs uppercase tracking-widest text-[var(--foreground-muted)] mb-2 flex items-center gap-1.5">
-            <Info className="w-3.5 h-3.5" /> Próximas fechas ocupadas
-          </p>
-          <ul className="space-y-1 text-sm">
-            {proximas.map((r, i) => (
-              <li key={i} className="flex items-center gap-2 text-[var(--foreground)]">
-                <XCircle className="w-3.5 h-3.5 text-[var(--danger)] shrink-0" />
-                <span className="font-mono text-xs">{r.fecha_inicio}</span>
-                <span className="text-[var(--foreground-subtle)]">→</span>
-                <span className="font-mono text-xs">{r.fecha_fin}</span>
-                {posadaSlug === 'confort' && (
-                  <span className="text-xs text-[var(--foreground-muted)] ml-1">
-                    ({r.modalidad === 'completa' ? 'completa' : 'apto'})
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : (
-        <div className="mt-6 bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-2 text-sm text-emerald-800">
-          <CheckCircle2 className="w-5 h-5" />
-          ¡Buenas noticias! Sin fechas ocupadas próximas para esta opción.
-        </div>
-      )}
     </div>
   );
 }
