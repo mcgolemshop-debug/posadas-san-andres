@@ -14,9 +14,11 @@ import {
   ImageIcon,
   CalendarDays,
 } from 'lucide-react';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/server';
 import { formatoUSD } from '@/lib/formato';
 import { CalendarioDisponibilidad } from '@/components/calendario-disponibilidad';
+import { urlFotoPosada } from '@/lib/storage/fotos';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,7 +49,7 @@ export default async function PosadaPage({
   const [posadaRes, preciosRes] = await Promise.all([
     supabase
       .from('posadas')
-      .select('id, slug, nombre, descripcion, tipo_alquiler')
+      .select('id, slug, nombre, descripcion, tipo_alquiler, foto_portada, galeria_urls')
       .eq('slug', slug)
       .eq('activa', true)
       .maybeSingle(),
@@ -61,7 +63,7 @@ export default async function PosadaPage({
 
   const { data: apartamentos } = await supabase
     .from('apartamentos')
-    .select('id, nombre, caracteristica, capacidad, orden')
+    .select('id, nombre, caracteristica, capacidad, orden, foto_portada')
     .eq('posada_id', posada.id)
     .eq('activo', true)
     .order('orden');
@@ -147,19 +149,45 @@ export default async function PosadaPage({
         {/* =====================  GALERÍA  ===================== */}
         <section>
           <SectionTitle eyebrow="Conoce el espacio" titulo="Galería" />
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className={`aspect-square rounded-xl border border-[var(--border-subtle)] ${theme.accentBg} flex items-center justify-center text-[var(--foreground-subtle)]`}
-              >
-                <ImageIcon className="w-8 h-8" />
+          {(() => {
+            const gal = (posada.galeria_urls as string[] | null) ?? [];
+            const portada = posada.foto_portada as string | null;
+            const todas = portada ? [portada, ...gal] : gal;
+            if (todas.length === 0) {
+              return (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div
+                        key={i}
+                        className={`aspect-square rounded-xl border border-[var(--border-subtle)] ${theme.accentBg} flex items-center justify-center text-[var(--foreground-subtle)]`}
+                      >
+                        <ImageIcon className="w-8 h-8" />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-[var(--foreground-subtle)] mt-3 italic text-center">
+                    Fotos reales próximamente. Mientras tanto, espacios placeholder.
+                  </p>
+                </>
+              );
+            }
+            return (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {todas.slice(0, 8).map((path) => (
+                  <div key={path} className="relative aspect-square rounded-xl overflow-hidden border border-[var(--border-subtle)]">
+                    <Image
+                      src={urlFotoPosada(path)!}
+                      alt={posada.nombre as string}
+                      fill
+                      sizes="(min-width: 640px) 25vw, 50vw"
+                      className="object-cover hover:scale-105 transition-transform duration-500"
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <p className="text-xs text-[var(--foreground-subtle)] mt-3 italic text-center">
-            Fotos reales próximamente. Mientras tanto, espacios placeholder.
-          </p>
+            );
+          })()}
         </section>
 
         {/* =====================  APARTAMENTOS (Confort) ===================== */}
@@ -177,6 +205,7 @@ export default async function PosadaPage({
                   nombre={a.nombre as string}
                   caracteristica={a.caracteristica as string | null}
                   capacidad={a.capacidad as number | null}
+                  fotoPortada={a.foto_portada as string | null}
                 />
               ))}
             </div>
@@ -286,11 +315,18 @@ function SectionTitle({ eyebrow, titulo }: { eyebrow: string; titulo: string }) 
   );
 }
 
-function ApartamentoCard({ nombre, caracteristica, capacidad }: { nombre: string; caracteristica: string | null; capacidad: number | null }) {
+function ApartamentoCard({ nombre, caracteristica, capacidad, fotoPortada }: { nombre: string; caracteristica: string | null; capacidad: number | null; fotoPortada: string | null }) {
   const esPiscina = caracteristica === 'piscina';
   const esGarage = caracteristica === 'garage';
+  const portadaUrl = urlFotoPosada(fotoPortada);
   return (
-    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 hover:shadow-md transition-all hover:-translate-y-0.5">
+    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden hover:shadow-md transition-all hover:-translate-y-0.5">
+      {portadaUrl ? (
+        <div className="relative h-32 w-full">
+          <Image src={portadaUrl} alt={nombre} fill sizes="300px" className="object-cover" />
+        </div>
+      ) : null}
+      <div className="p-5">
       <div className="w-10 h-10 rounded-lg bg-[var(--accent-light)] text-[var(--accent-hover)] flex items-center justify-center mb-3">
         <Bed className="w-5 h-5" />
       </div>
@@ -308,6 +344,7 @@ function ApartamentoCard({ nombre, caracteristica, capacidad }: { nombre: string
           <Car className="w-3 h-3" /> Salida a garage
         </span>
       )}
+      </div>
     </div>
   );
 }

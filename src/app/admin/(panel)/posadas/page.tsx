@@ -1,6 +1,7 @@
 import { exigirRol } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { formatoUSD } from '@/lib/formato';
+import { UploaderFotos } from '@/components/uploader-fotos';
 import {
   actualizarPosada,
   actualizarApartamento,
@@ -18,8 +19,8 @@ export default async function PosadasConfigPage() {
   const supabase = await createClient();
 
   const [posadasRes, aptosRes, tempsRes, preciosRes] = await Promise.all([
-    supabase.from('posadas').select('id, slug, nombre, descripcion, tipo_alquiler').order('slug'),
-    supabase.from('apartamentos').select('id, posada_id, nombre, caracteristica, capacidad, orden').order('orden'),
+    supabase.from('posadas').select('id, slug, nombre, descripcion, tipo_alquiler, foto_portada, galeria_urls').order('slug'),
+    supabase.from('apartamentos').select('id, posada_id, nombre, caracteristica, capacidad, orden, foto_portada, galeria_urls').order('orden'),
     supabase
       .from('temporadas')
       .select('id, nombre, fecha_inicio, fecha_fin, prioridad, estadia_minima_noches, fuerza_completa_confort, activa')
@@ -82,6 +83,20 @@ export default async function PosadasConfigPage() {
             </form>
           ))}
         </div>
+
+        {/* Uploaders de fotos de cada posada */}
+        <div className="mt-6 space-y-4">
+          {posadas.map((p) => (
+            <UploaderFotos
+              key={`fotos-${p.id}`}
+              tipo="posada"
+              targetId={p.id as string}
+              fotoPortada={(p.foto_portada as string | null) ?? null}
+              galeriaUrls={((p.galeria_urls as string[] | null) ?? [])}
+              titulo={p.nombre as string}
+            />
+          ))}
+        </div>
       </section>
 
       {/* ============ APARTAMENTOS (Confort) ============ */}
@@ -133,6 +148,20 @@ export default async function PosadasConfigPage() {
                 Guardar
               </button>
             </form>
+          ))}
+        </div>
+
+        {/* Uploaders de fotos por apartamento */}
+        <div className="mt-6 space-y-4">
+          {aptos.map((a) => (
+            <UploaderFotos
+              key={`fotos-apto-${a.id}`}
+              tipo="apartamento"
+              targetId={a.id as string}
+              fotoPortada={(a.foto_portada as string | null) ?? null}
+              galeriaUrls={((a.galeria_urls as string[] | null) ?? [])}
+              titulo={`Apto ${a.nombre as string}`}
+            />
           ))}
         </div>
       </section>

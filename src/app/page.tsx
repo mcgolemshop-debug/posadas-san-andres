@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   ArrowRight,
   Users,
@@ -11,6 +12,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { urlFotoPosada } from '@/lib/storage/fotos';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,13 +21,14 @@ interface PosadaCardData {
   nombre: string;
   descripcion: string | null;
   tipo_alquiler: 'individual_y_completa' | 'solo_completa';
+  foto_portada: string | null;
 }
 
 export default async function Home() {
   const supabase = await createClient();
   const { data: posadas, error } = await supabase
     .from('posadas')
-    .select('slug, nombre, descripcion, tipo_alquiler')
+    .select('slug, nombre, descripcion, tipo_alquiler, foto_portada')
     .eq('activa', true)
     .order('slug');
 
@@ -146,7 +149,6 @@ function PosadaCard({ posada, index }: { posada: PosadaCardData; index: number }
     ? 'Casa completa · grupos grandes'
     : 'Apartamento individual o casa completa';
 
-  // Estilos por posada (Beach = mar/turquesa, Confort = atardecer/coral)
   const styling = esBeach
     ? {
         gradient: 'from-cyan-600 via-sky-700 to-blue-900',
@@ -163,6 +165,8 @@ function PosadaCard({ posada, index }: { posada: PosadaCardData; index: number }
         capacidad: 'Hasta 28 personas (4 aptos de 7)',
       };
 
+  const portadaUrl = urlFotoPosada(posada.foto_portada);
+
   return (
     <Link
       href={`/posada/${posada.slug}`}
@@ -170,13 +174,25 @@ function PosadaCard({ posada, index }: { posada: PosadaCardData; index: number }
       className="group relative block rounded-2xl overflow-hidden bg-[var(--surface)] border border-[var(--border)] shadow-md hover:shadow-2xl transition-all hover:-translate-y-1 animate-in"
     >
       {/* Hero visual de la card */}
-      <div className={`relative h-64 bg-gradient-to-br ${styling.gradient} flex items-center justify-center overflow-hidden`}>
-        <div className={`absolute -top-12 -right-12 w-48 h-48 rounded-full bg-gradient-to-br ${styling.decoration} to-transparent blur-2xl`} />
-        <div className="relative text-white/90 group-hover:scale-110 transition-transform duration-500">
-          {styling.icon}
-        </div>
+      <div className={`relative h-64 flex items-center justify-center overflow-hidden ${portadaUrl ? '' : `bg-gradient-to-br ${styling.gradient}`}`}>
+        {portadaUrl ? (
+          <Image
+            src={portadaUrl}
+            alt={posada.nombre}
+            fill
+            sizes="(min-width: 1024px) 50vw, 100vw"
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <>
+            <div className={`absolute -top-12 -right-12 w-48 h-48 rounded-full bg-gradient-to-br ${styling.decoration} to-transparent blur-2xl`} />
+            <div className="relative text-white/90 group-hover:scale-110 transition-transform duration-500">
+              {styling.icon}
+            </div>
+          </>
+        )}
         {/* Chip de etiqueta */}
-        <div className="absolute top-4 left-4">
+        <div className="absolute top-4 left-4 z-10">
           <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm bg-white/90 text-[var(--primary)]`}>
             {etiqueta}
           </span>
