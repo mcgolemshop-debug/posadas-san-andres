@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { formatoUSD } from '@/lib/formato';
 import { CalendarioDisponibilidad } from '@/components/calendario-disponibilidad';
 import { urlFotoPosada } from '@/lib/storage/fotos';
@@ -70,9 +71,14 @@ export default async function PosadaPage({
     .eq('activo', true)
     .order('orden');
 
-  // Reservas confirmadas a futuro para mostrar disponibilidad
+  // Reservas confirmadas a futuro para mostrar disponibilidad.
+  // Usamos el admin client porque el cliente anon (visitante público sin login)
+  // no tiene permiso SELECT en reservas por RLS. Aquí solo leemos campos NO
+  // sensibles (fechas y modalidad), no datos del cliente. Solo se ejecuta en
+  // el servidor, así que las claves de admin nunca llegan al navegador.
   const hoyISO = new Date().toISOString().slice(0, 10);
-  const { data: reservasConfirmadas } = await supabase
+  const admin = createAdminClient();
+  const { data: reservasConfirmadas } = await admin
     .from('reservas')
     .select('fecha_inicio, fecha_fin, modalidad, apartamento_id, apartamentos_ids')
     .eq('posada_id', posada.id)

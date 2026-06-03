@@ -52,9 +52,12 @@ export default async function ReservarPage({
   const posada = posadaRes.data;
   if (!posada) notFound();
 
-  // Reservas confirmadas a futuro de esta posada (para bloquear fechas en el calendario)
+  // Reservas confirmadas a futuro de esta posada (para bloquear fechas en el calendario).
+  // Usamos admin client por la misma razón que en /posada/[slug]: anon no tiene
+  // permiso SELECT en reservas por RLS. Solo leemos campos NO sensibles.
   const hoyISO = new Date().toISOString().slice(0, 10);
-  const { data: reservasConfirmadas } = await supabase
+  const adminClient = createAdminClient();
+  const { data: reservasConfirmadas } = await adminClient
     .from('reservas')
     .select('fecha_inicio, fecha_fin, modalidad, apartamento_id, apartamentos_ids')
     .eq('posada_id', posada.id)
