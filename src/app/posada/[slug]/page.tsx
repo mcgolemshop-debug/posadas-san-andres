@@ -70,9 +70,10 @@ export default async function PosadaPage({
   const hoyISO = new Date().toISOString().slice(0, 10);
   const { data: reservasConfirmadas } = await supabase
     .from('reservas')
-    .select('fecha_inicio, fecha_fin, modalidad, apartamento_id')
+    .select('fecha_inicio, fecha_fin, modalidad, apartamento_id, apartamentos_ids')
     .eq('posada_id', posada.id)
     .eq('estado', 'confirmada')
+    .is('eliminada_at', null)
     .gte('fecha_fin', hoyISO);
 
   const preciosPosada = preciosRes.data ?? [];
@@ -225,6 +226,7 @@ export default async function PosadaPage({
               fecha_fin: r.fecha_fin as string,
               modalidad: r.modalidad as 'apartamento' | 'completa',
               apartamento_id: r.apartamento_id as string | null,
+              apartamentos_ids: (r.apartamentos_ids as string[] | null) ?? null,
             }))}
             apartamentos={(apartamentos ?? []).map((a) => ({
               id: a.id as string,

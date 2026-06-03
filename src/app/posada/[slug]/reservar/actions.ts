@@ -18,7 +18,10 @@ const schema = z.object({
   fecha_fin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha de salida inválida.'),
   modalidad: z.enum(['apartamento', 'completa']),
   apartamento_id: z.string().uuid().nullable(),
-  num_personas: z.coerce.number().int().positive().max(28),
+  /** Multi-apto: array de IDs cuando modalidad=apartamento. Si vacío, cae a apartamento_id. */
+  apartamentos_ids: z.array(z.string().uuid()).default([]),
+  num_personas: z.coerce.number().int().positive().max(50),
+  num_personas_extras: z.coerce.number().int().min(0).max(50).default(0),
   cliente_nombre: z.string().min(1, 'Nombre requerido.').max(200),
   cliente_telefono: z.string().min(1, 'Teléfono requerido.').max(50),
   cliente_email: z.string().email('Email inválido.').max(200),
@@ -36,13 +39,17 @@ export async function enviarReserva(
 ): Promise<EstadoEnvio> {
   // --- 1) Parsear y validar campos ---
   const apto = formData.get('apartamento_id');
+  // Multi-apto: getAll trae todos los inputs con name="apartamentos_ids"
+  const aptosIds = formData.getAll('apartamentos_ids').filter((v): v is string => typeof v === 'string' && v.length > 0);
   const datos = {
     posada_slug: formData.get('posada_slug'),
     fecha_inicio: formData.get('fecha_inicio'),
     fecha_fin: formData.get('fecha_fin'),
     modalidad: formData.get('modalidad'),
     apartamento_id: apto && apto !== '' ? apto : null,
+    apartamentos_ids: aptosIds,
     num_personas: formData.get('num_personas'),
+    num_personas_extras: formData.get('num_personas_extras') || 0,
     cliente_nombre: formData.get('cliente_nombre'),
     cliente_telefono: formData.get('cliente_telefono'),
     cliente_email: formData.get('cliente_email'),
@@ -100,7 +107,7 @@ export async function enviarReserva(
     supabase
       .from('temporadas')
       .select(
-        'id, nombre, prioridad, estadia_minima_noches, fuerza_completa_confort, fecha_inicio, fecha_fin, activa',
+        'id, nombre, prioridad, estadia_minima_noches, fuerza_completa_confort, costo_extra_persona_usd, fecha_inicio, fecha_fin, activa',
       ),
     supabase
       .from('precios')
@@ -119,6 +126,7 @@ export async function enviarReserva(
     prioridad: t.prioridad as number,
     estadia_minima_noches: t.estadia_minima_noches as number,
     fuerza_completa_confort: t.fuerza_completa_confort as boolean,
+    costo_extra_persona_usd: Number(t.costo_extra_persona_usd ?? 0),
     fecha_inicio: t.fecha_inicio as string | null,
     fecha_fin: t.fecha_fin as string | null,
     activa: t.activa as boolean,
@@ -133,6 +141,11 @@ export async function enviarReserva(
     activo: p.activo as boolean,
   }));
 
+  // Cantidad de apartamentos seleccionados (multi-apto)
+  const cantidadApartamentos = datosOK.modalidad === 'apartamento'
+    ? Math.max(1, datosOK.apartamentos_ids.length)
+    : 1;
+
   const resultado = calcularPrecioReserva({
     posada_slug: posada.slug as 'confort' | 'beach',
     posada_id: posada.id as string,
@@ -140,6 +153,8 @@ export async function enviarReserva(
     fecha_fin: datosOK.fecha_fin,
     modalidad: datosOK.modalidad,
     num_personas: datosOK.num_personas,
+    cantidad_apartamentos: cantidadApartamentos,
+    num_personas_extras: datosOK.num_personas_extras,
     temporadas,
     precios,
   });
@@ -153,10 +168,11 @@ export async function enviarReserva(
     };
   }
 
-  // --- 6) Validar disponibilidad ---
+  // --- 6) Validar disponibilidad (multi-apto si aplica) ---
   const disp = await validarDisponibilidad(supabase, {
     posada_id: posada.id as string,
     apartamento_id: datosOK.apartamento_id,
+    apartamentos_ids: datosOK.apartamentos_ids.length > 0 ? datosOK.apartamentos_ids : null,
     modalidad: datosOK.modalidad,
     fecha_inicio: datosOK.fecha_inicio,
     fecha_fin: datosOK.fecha_fin,
@@ -192,6 +208,7 @@ export async function enviarReserva(
     .insert({
       posada_id: posada.id,
       apartamento_id: datosOK.apartamento_id,
+      apartamentos_ids: datosOK.apartamentos_ids.length > 0 ? datosOK.apartamentos_ids : null,
       modalidad: datosOK.modalidad,
       fecha_inicio: datosOK.fecha_inicio,
       fecha_fin: datosOK.fecha_fin,
@@ -199,9 +216,14 @@ export async function enviarReserva(
       cliente_telefono: datosOK.cliente_telefono,
       cliente_email: datosOK.cliente_email,
       num_personas: datosOK.num_personas,
+      num_personas_extras: datosOK.num_personas_extras,
       estado: 'pendiente',
       total_usd: resultado.total_usd,
       desglose_precio: {
+        subtotal_usd: resultado.subtotal_usd,
+        extras_personas_usd: resultado.extras_personas_usd,
+        servicio_extra_usd: resultado.servicio_extra_usd,
+        descuento_usd: resultado.descuento_usd,
         noches: resultado.noches,
         temporadas_aplicadas: resultado.temporadas_aplicadas,
       },

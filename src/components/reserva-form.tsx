@@ -57,8 +57,25 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
   const [modalidad, setModalidad] = useState<ModalidadReserva>(
     posada.tipo_alquiler === 'solo_completa' ? 'completa' : 'apartamento',
   );
-  const [apartamentoId, setApartamentoId] = useState(apartamentos[0]?.id ?? '');
+  // Multi-apto: array de IDs seleccionados (Confort modalidad=apartamento)
+  const [aptosSeleccionados, setAptosSeleccionados] = useState<string[]>(
+    apartamentos[0] ? [apartamentos[0].id] : [],
+  );
   const [numPersonas, setNumPersonas] = useState<number>(posada.slug === 'beach' ? 12 : 4);
+
+  // Capacidad incluida según selección actual
+  const capacidadIncluida = (() => {
+    if (posada.slug === 'beach') return numPersonas; // 12/16/20 que el cliente eligió
+    if (modalidad === 'completa') return 28;
+    // Modalidad apartamento: sumar capacidades de los aptos seleccionados
+    return aptosSeleccionados.reduce((sum, id) => {
+      const a = apartamentos.find((x) => x.id === id);
+      return sum + (a?.capacidad ?? 7);
+    }, 0);
+  })();
+
+  // Personas extras = max(0, num_personas - capacidad)
+  const numPersonasExtras = Math.max(0, numPersonas - capacidadIncluida);
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
   const [email, setEmail] = useState('');
@@ -80,14 +97,28 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
   const fechaInicio = rango?.from ? format(rango.from, 'yyyy-MM-dd') : '';
   const fechaFin = rango?.to ? format(rango.to, 'yyyy-MM-dd') : '';
 
-  // Fechas deshabilitadas en función del contexto (modalidad + apto)
+  // Fechas deshabilitadas: si modalidad=apartamento con N aptos seleccionados,
+  // bloqueamos las fechas ocupadas por CUALQUIERA de ellos.
   const fechasOcupadas = useMemo(() => {
-    const ctx =
-      modalidad === 'completa'
-        ? ({ modalidad: 'completa', apartamentoId: null } as const)
-        : ({ modalidad: 'apartamento', apartamentoId: apartamentoId } as const);
-    return fechasOcupadasParaContexto(reservasConfirmadas, ctx, posada.slug);
-  }, [modalidad, apartamentoId, reservasConfirmadas, posada.slug]);
+    if (modalidad === 'completa') {
+      const ctx = { modalidad: 'completa', apartamentoId: null } as const;
+      return fechasOcupadasParaContexto(reservasConfirmadas, ctx, posada.slug);
+    }
+    // Unir fechas ocupadas de todos los aptos seleccionados
+    const todas: Date[] = [];
+    const yaIncluidas = new Set<number>();
+    for (const aptoId of aptosSeleccionados) {
+      const ctx = { modalidad: 'apartamento', apartamentoId: aptoId } as const;
+      const ocupadas = fechasOcupadasParaContexto(reservasConfirmadas, ctx, posada.slug);
+      for (const d of ocupadas) {
+        if (!yaIncluidas.has(d.getTime())) {
+          yaIncluidas.add(d.getTime());
+          todas.push(d);
+        }
+      }
+    }
+    return todas;
+  }, [modalidad, aptosSeleccionados, reservasConfirmadas, posada.slug]);
 
   // Si el cliente cambia modalidad/apto y el rango actual choca → limpiar
   // Usamos un ref para acceder al rango actual sin disparar el effect en cada render
@@ -111,6 +142,8 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
     null,
   );
 
+  const cantidadApartamentos = modalidad === 'apartamento' ? aptosSeleccionados.length : 1;
+
   const resultado = useMemo(() => {
     if (!fechaInicio || !fechaFin) return null;
     return calcularPrecioReserva({
@@ -120,10 +153,12 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
       fecha_fin: fechaFin,
       modalidad,
       num_personas: numPersonas,
+      cantidad_apartamentos: cantidadApartamentos,
+      num_personas_extras: numPersonasExtras,
       temporadas,
       precios,
     });
-  }, [fechaInicio, fechaFin, modalidad, numPersonas, posada, temporadas, precios]);
+  }, [fechaInicio, fechaFin, modalidad, numPersonas, cantidadApartamentos, numPersonasExtras, posada, temporadas, precios]);
 
   const puedeEnviar =
     !!resultado &&
@@ -134,13 +169,14 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
     telefono.trim().length > 0 &&
     /\S+@\S+\.\S+/.test(email) &&
     comprobante !== null &&
-    (modalidad === 'completa' || apartamentoId);
+    (modalidad === 'completa' || aptosSeleccionados.length > 0);
 
   return (
     <form action={formAction} className="grid lg:grid-cols-[1fr_380px] gap-6 lg:gap-8">
       <input type="hidden" name="posada_slug" value={posada.slug} />
       <input type="hidden" name="fecha_inicio" value={fechaInicio} />
       <input type="hidden" name="fecha_fin" value={fechaFin} />
+      <input type="hidden" name="num_personas_extras" value={numPersonasExtras} />
 
       {/* Columna izquierda */}
       <div className="space-y-5">
@@ -210,23 +246,58 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
         )}
 
         {modalidad === 'apartamento' ? (
-          <Section icon={<Bed className="w-5 h-5" />} titulo="Apartamento">
-            <select
-              name="apartamento_id" value={apartamentoId} required
-              onChange={(e) => setApartamentoId(e.target.value)}
-              className={inputClass}
-            >
-              {apartamentos.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.nombre}
-                  {a.caracteristica ? ` — ${a.caracteristica}` : ''}
-                  {a.capacidad ? ` (hasta ${a.capacidad} pers)` : ''}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-[var(--foreground-subtle)] mt-2">
-              Al cambiar de apartamento, el calendario se actualiza con las fechas ocupadas de ese apto.
+          <Section icon={<Bed className="w-5 h-5" />} titulo="¿Cuáles apartamentos?">
+            <p className="text-sm text-[var(--foreground-muted)] mb-3">
+              Selecciona uno o varios. Cada apto reserva 7 personas. Los precios se suman.
             </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {apartamentos.map((a) => {
+                const seleccionado = aptosSeleccionados.includes(a.id);
+                return (
+                  <label
+                    key={a.id}
+                    className={`flex items-start gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all ${
+                      seleccionado
+                        ? 'border-[var(--primary)] bg-[var(--primary-light)]/40'
+                        : 'border-[var(--border)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-elevated)]'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={seleccionado}
+                      onChange={() => {
+                        setAptosSeleccionados((prev) =>
+                          seleccionado ? prev.filter((id) => id !== a.id) : [...prev, a.id],
+                        );
+                      }}
+                      className="mt-1 accent-[var(--primary)]"
+                    />
+                    <div className="flex-1">
+                      <p className="font-semibold text-[var(--foreground)]">{a.nombre}</p>
+                      <p className="text-xs text-[var(--foreground-muted)] mt-0.5">
+                        {a.caracteristica && <span>{a.caracteristica} · </span>}
+                        Hasta {a.capacidad ?? 7} pers
+                      </p>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+            {aptosSeleccionados.length === 0 && (
+              <p className="text-xs text-[var(--danger)] mt-2 flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5" /> Selecciona al menos un apartamento.
+              </p>
+            )}
+            {aptosSeleccionados.length > 1 && (
+              <p className="text-xs text-[var(--success)] mt-2 flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" /> {aptosSeleccionados.length} apartamentos seleccionados, hasta {capacidadIncluida} personas incluidas.
+              </p>
+            )}
+            {/* Hidden inputs para enviar la lista */}
+            <input type="hidden" name="apartamento_id" value={aptosSeleccionados[0] ?? ''} />
+            {aptosSeleccionados.map((id) => (
+              <input key={id} type="hidden" name="apartamentos_ids" value={id} />
+            ))}
           </Section>
         ) : (
           <input type="hidden" name="apartamento_id" value="" />
@@ -393,6 +464,32 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
                   ))}
                 </div>
               )}
+
+              {/* Desglose */}
+              <div className="pt-3 mt-3 border-t border-[var(--border-subtle)] space-y-1.5">
+                <div className="flex justify-between text-xs text-[var(--foreground-muted)]">
+                  <span>Subtotal {cantidadApartamentos > 1 ? `(${cantidadApartamentos} aptos)` : ''}</span>
+                  <span>{formatoUSD(resultado.subtotal_usd)}</span>
+                </div>
+                {resultado.extras_personas_usd > 0 && (
+                  <div className="flex justify-between text-xs text-[var(--foreground-muted)]">
+                    <span>+ {numPersonasExtras} {numPersonasExtras === 1 ? 'persona extra' : 'personas extras'}</span>
+                    <span>{formatoUSD(resultado.extras_personas_usd)}</span>
+                  </div>
+                )}
+                {resultado.servicio_extra_usd > 0 && (
+                  <div className="flex justify-between text-xs text-[var(--foreground-muted)]">
+                    <span>+ Servicio extra</span>
+                    <span>{formatoUSD(resultado.servicio_extra_usd)}</span>
+                  </div>
+                )}
+                {resultado.descuento_usd > 0 && (
+                  <div className="flex justify-between text-xs text-[var(--success)]">
+                    <span>− Descuento</span>
+                    <span>−{formatoUSD(resultado.descuento_usd)}</span>
+                  </div>
+                )}
+              </div>
 
               <div className="pt-4 mt-4 border-t-2 border-[var(--primary)]/10">
                 <div className="flex justify-between items-baseline">

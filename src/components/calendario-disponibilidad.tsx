@@ -10,6 +10,8 @@ export interface ReservaCalendar {
   fecha_fin: string;     // YYYY-MM-DD (check-out, exclusivo)
   modalidad: 'apartamento' | 'completa';
   apartamento_id: string | null;
+  /** Multi-apto: array de IDs de apartamentos cuando modalidad=apartamento. Si presente, suplanta apartamento_id. */
+  apartamentos_ids?: string[] | null;
 }
 
 interface ApartamentoOpcion {
@@ -200,7 +202,12 @@ function debeBloquear(
 ): boolean {
   if (posadaSlug === 'beach') return true;
   if (ctx.modalidad === 'completa') return true;
-  return r.modalidad === 'completa' || r.apartamento_id === ctx.apartamentoId;
+  if (r.modalidad === 'completa') return true;
+  // Reserva existente puede ser multi-apto (apartamentos_ids[]) o single (apartamento_id).
+  const susAptos: string[] = Array.isArray(r.apartamentos_ids) && r.apartamentos_ids.length > 0
+    ? r.apartamentos_ids
+    : (r.apartamento_id ? [r.apartamento_id] : []);
+  return susAptos.includes(ctx.apartamentoId);
 }
 
 function acumularNoches(out: Date[], inicio: string, fin: string): void {

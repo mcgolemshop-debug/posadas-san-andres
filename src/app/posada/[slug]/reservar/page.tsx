@@ -40,7 +40,7 @@ export default async function ReservarPage({
     supabase
       .from('temporadas')
       .select(
-        'id, nombre, prioridad, estadia_minima_noches, fuerza_completa_confort, fecha_inicio, fecha_fin, activa',
+        'id, nombre, prioridad, estadia_minima_noches, fuerza_completa_confort, costo_extra_persona_usd, fecha_inicio, fecha_fin, activa',
       ),
     supabase
       .from('precios')
@@ -54,9 +54,10 @@ export default async function ReservarPage({
   const hoyISO = new Date().toISOString().slice(0, 10);
   const { data: reservasConfirmadas } = await supabase
     .from('reservas')
-    .select('fecha_inicio, fecha_fin, modalidad, apartamento_id')
+    .select('fecha_inicio, fecha_fin, modalidad, apartamento_id, apartamentos_ids')
     .eq('posada_id', posada.id)
     .eq('estado', 'confirmada')
+    .is('eliminada_at', null)
     .gte('fecha_fin', hoyISO);
 
   const aptosPosada =
@@ -105,6 +106,7 @@ export default async function ReservarPage({
             prioridad: t.prioridad as number,
             estadia_minima_noches: t.estadia_minima_noches as number,
             fuerza_completa_confort: t.fuerza_completa_confort as boolean,
+            costo_extra_persona_usd: Number(t.costo_extra_persona_usd ?? 0),
             fecha_inicio: t.fecha_inicio as string | null,
             fecha_fin: t.fecha_fin as string | null,
             activa: t.activa as boolean,
@@ -122,6 +124,7 @@ export default async function ReservarPage({
             fecha_fin: r.fecha_fin as string,
             modalidad: r.modalidad as 'apartamento' | 'completa',
             apartamento_id: r.apartamento_id as string | null,
+            apartamentos_ids: (r.apartamentos_ids as string[] | null) ?? null,
           }))}
         />
       </div>
