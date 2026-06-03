@@ -107,7 +107,7 @@ export default async function DashboardPage() {
             titulo="Ver reservas"
             desc={
               sesion.perfil.rol === 'conserje' ? 'Reservas de tu posada.'
-                : sesion.perfil.rol === 'vulcanos' ? 'Solo las que tú gestionas.'
+                : sesion.perfil.rol === 'vulcanos' ? 'Todas las reservas, gestionas las tuyas.'
                 : 'Todas las reservas con filtros.'
             }
           />
@@ -117,6 +117,22 @@ export default async function DashboardPage() {
             titulo="Calendario"
             desc="Vista mensual de qué fechas están bloqueadas."
           />
+          {sesion.perfil.rol === 'vulcanos' && (
+            <>
+              <CardModulo
+                href="/posada/confort/reservar"
+                icon={<CalendarCheck2 className="w-5 h-5" />}
+                titulo="Crear reserva Confort"
+                desc="Crea una reserva nueva para Confort. Luego la 'tomas' como gestora desde el detalle para ganar comisión."
+              />
+              <CardModulo
+                href="/posada/beach/reservar"
+                icon={<CalendarCheck2 className="w-5 h-5" />}
+                titulo="Crear reserva Beach"
+                desc="Crea una reserva nueva para Beach. Luego la 'tomas' como gestora desde el detalle para ganar comisión."
+              />
+            </>
+          )}
           {['dueno', 'conserje', 'contador'].includes(sesion.perfil.rol) && (
             <CardModulo
               href="/admin/gastos"

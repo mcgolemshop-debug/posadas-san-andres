@@ -27,8 +27,11 @@ const ITEMS: ItemNav[] = [
   { href: '/admin', label: 'Inicio', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['dueno', 'conserje', 'vulcanos', 'contador'] },
   { href: '/admin/reservas', label: 'Reservas', icon: <CalendarCheck2 className="w-5 h-5" />, roles: ['dueno', 'conserje', 'vulcanos', 'contador'] },
   { href: '/admin/calendario', label: 'Calendario', icon: <CalendarRange className="w-5 h-5" />, roles: ['dueno', 'conserje', 'vulcanos', 'contador'] },
+  // Vulcanos NO ve gastos (interno) — solo conserje, dueno, contador
   { href: '/admin/gastos', label: 'Gastos', icon: <Receipt className="w-5 h-5" />, roles: ['dueno', 'conserje', 'contador'] },
+  // Vulcanos sí ve sus comisiones
   { href: '/admin/comisiones', label: 'Comisiones', icon: <HandCoins className="w-5 h-5" />, roles: ['dueno', 'vulcanos', 'conserje', 'contador'] },
+  // Vulcanos NO ve pagos consolidados ni nómina ni reportes financieros
   { href: '/admin/pagos', label: 'Pagos', icon: <CreditCard className="w-5 h-5" />, roles: ['dueno', 'contador'] },
   { href: '/admin/nomina', label: 'Nómina', icon: <Users2 className="w-5 h-5" />, roles: ['dueno', 'contador'] },
   { href: '/admin/reportes', label: 'Reportes', icon: <BarChart3 className="w-5 h-5" />, roles: ['dueno', 'contador'] },
