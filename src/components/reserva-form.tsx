@@ -97,6 +97,27 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
   const fechaInicio = rango?.from ? format(rango.from, 'yyyy-MM-dd') : '';
   const fechaFin = rango?.to ? format(rango.to, 'yyyy-MM-dd') : '';
 
+  // Lista de PRÓXIMAS reservas que afectan el contexto actual (para mostrar
+  // debajo del calendario, útil en móvil donde el calendario es pequeño)
+  const proximasReservasOcupadas = useMemo(() => {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    return reservasConfirmadas
+      .filter((r) => {
+        const fin = new Date(r.fecha_fin + 'T12:00:00Z');
+        if (fin < hoy) return false;
+        if (posada.slug === 'beach') return true;
+        if (modalidad === 'completa') return true;
+        if (r.modalidad === 'completa') return true;
+        const susAptos: string[] = Array.isArray(r.apartamentos_ids) && r.apartamentos_ids.length > 0
+          ? r.apartamentos_ids
+          : (r.apartamento_id ? [r.apartamento_id] : []);
+        return susAptos.some((a) => aptosSeleccionados.includes(a));
+      })
+      .sort((a, b) => a.fecha_inicio.localeCompare(b.fecha_inicio))
+      .slice(0, 8);
+  }, [reservasConfirmadas, modalidad, aptosSeleccionados, posada.slug]);
+
   // Fechas deshabilitadas: si modalidad=apartamento con N aptos seleccionados,
   // bloqueamos las fechas ocupadas por CUALQUIERA de ellos.
   const fechasOcupadas = useMemo(() => {
@@ -202,6 +223,37 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
               showOutsideDays={false}
             />
           </div>
+
+          {/* Lista de próximas fechas ocupadas — visible especialmente en móvil
+              donde el calendario es de 1 mes y las fechas tachadas son pequeñas */}
+          {proximasReservasOcupadas.length > 0 && (
+            <div className="mt-4 bg-[var(--danger-light)] border border-[var(--danger)]/20 rounded-lg p-3">
+              <p className="text-xs font-semibold text-[var(--danger)] mb-2 flex items-center gap-1">
+                <XCircle className="w-3.5 h-3.5" /> Fechas ya reservadas (no disponibles):
+              </p>
+              <ul className="space-y-1 text-sm text-[var(--foreground)]">
+                {proximasReservasOcupadas.map((r, i) => (
+                  <li key={i} className="flex flex-wrap items-center gap-1 text-xs">
+                    <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-[var(--danger)]/20">
+                      {formatoFechaCorta(r.fecha_inicio)}
+                    </span>
+                    <span className="text-[var(--foreground-muted)]">→</span>
+                    <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-[var(--danger)]/20">
+                      {formatoFechaCorta(r.fecha_fin)}
+                    </span>
+                    {posada.slug === 'confort' && r.modalidad === 'completa' && (
+                      <span className="text-[var(--foreground-muted)] ml-1">(posada completa)</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {proximasReservasOcupadas.length === 0 && reservasConfirmadas.length === 0 && (
+            <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-800 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" /> Sin fechas ocupadas. Puedes reservar cualquier día.
+            </div>
+          )}
 
           {/* Resumen del rango elegido */}
           {fechaInicio && fechaFin && (
@@ -320,26 +372,33 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
               </p>
             </>
           ) : (
-            <input
-              type="number" name="num_personas"
-              min={1} max={modalidad === 'completa' ? 28 : 7}
-              value={numPersonas > 0 ? numPersonas : ''}
-              placeholder="¿Cuántos vienen?"
-              onChange={(e) => {
-                const v = e.target.value;
-                if (v === '') {
-                  setNumPersonas(0); // permite que el campo se vea vacío al borrar
-                } else {
-                  const n = Number(v);
-                  if (!isNaN(n) && n >= 0) setNumPersonas(n);
-                }
-              }}
-              onBlur={(e) => {
-                // Si el campo quedó vacío, volver al mínimo
-                if (e.target.value === '' || Number(e.target.value) < 1) setNumPersonas(1);
-              }}
-              className={inputClass}
-            />
+            <>
+              <input
+                type="number"
+                min={1} max={modalidad === 'completa' ? 28 : 7}
+                value={numPersonas > 0 ? numPersonas : ''}
+                placeholder="¿Cuántos vienen?"
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '') {
+                    setNumPersonas(0); // permite que el campo se vea vacío al borrar
+                  } else {
+                    const n = Number(v);
+                    if (!isNaN(n) && n >= 0) setNumPersonas(n);
+                  }
+                }}
+                onBlur={(e) => {
+                  // Si el campo quedó vacío, volver al mínimo
+                  if (e.target.value === '' || Number(e.target.value) < 1) setNumPersonas(1);
+                }}
+                inputMode="numeric"
+                className={inputClass}
+              />
+              {/* Hidden con el name que SIEMPRE envía un valor válido (>=1).
+                  Esto evita que en móvil, donde a veces el onBlur no dispara
+                  antes del submit, el formulario falle por num_personas=0. */}
+              <input type="hidden" name="num_personas" value={Math.max(1, numPersonas)} />
+            </>
           )}
         </Section>
 

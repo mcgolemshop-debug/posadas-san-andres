@@ -58,8 +58,12 @@ export async function enviarReserva(
 
   const v = schema.safeParse(datos);
   if (!v.success) {
+    console.error('[enviarReserva] schema validation failed:', v.error.issues, 'datos:', datos);
+    const detalle = v.error.issues
+      .map((i) => `${i.path.join('.') || 'campo'}: ${i.message}`)
+      .join(' · ');
     return {
-      error: 'Por favor revisa los campos: ' + v.error.issues.map((i) => i.message).join(' '),
+      error: 'Revisa los campos del formulario. ' + detalle,
       campos_invalidos: v.error.issues.map((i) => i.path.join('.')),
     };
   }
@@ -68,13 +72,15 @@ export async function enviarReserva(
   // --- 2) Validar comprobante de pago (OBLIGATORIO) ---
   const comprobante = formData.get('comprobante') as File | null;
   if (!comprobante || comprobante.size === 0) {
-    return { error: 'El comprobante de pago es obligatorio.' };
+    return { error: 'El comprobante de pago es obligatorio. Sube una imagen o PDF.' };
   }
   if (comprobante.size > TAMANO_MAX_BYTES) {
-    return { error: 'El comprobante supera los 10 MB. Reduce el archivo y vuelve a intentar.' };
+    const mb = (comprobante.size / 1024 / 1024).toFixed(1);
+    return { error: `El comprobante pesa ${mb} MB y el límite es 10 MB. Toma una foto en menor resolución o comprime el PDF.` };
   }
   if (!TIPOS_PERMITIDOS.includes(comprobante.type)) {
-    return { error: 'Formato de comprobante no permitido. Usa JPG, PNG, WebP, HEIC o PDF.' };
+    console.warn('[enviarReserva] tipo no permitido:', comprobante.type, 'nombre:', comprobante.name);
+    return { error: `Formato no permitido (${comprobante.type || 'desconocido'}). Usa JPG, PNG, WebP, HEIC o PDF.` };
   }
 
   // --- 3) Validar coherencia interna ---
@@ -197,7 +203,8 @@ export async function enviarReserva(
     });
 
   if (uploadErr) {
-    return { error: `No pude subir el comprobante: ${uploadErr.message}` };
+    console.error('[enviarReserva] storage upload error:', uploadErr, 'archivo:', { name: comprobante.name, type: comprobante.type, size: comprobante.size });
+    return { error: `No pude subir el comprobante (${uploadErr.message}). Intenta con otra foto o formato.` };
   }
 
   // --- 8) Insertar reserva pendiente ---
@@ -234,9 +241,10 @@ export async function enviarReserva(
     .single();
 
   if (insertErr || !reserva) {
+    console.error('[enviarReserva] insert error:', insertErr, 'datosOK:', datosOK);
     // Si falló el insert, intentamos borrar el comprobante para no dejar basura
     await admin.storage.from('comprobantes-pago').remove([nombreArchivo]);
-    return { error: `No pude guardar la reserva: ${insertErr?.message ?? 'error desconocido'}` };
+    return { error: `No pude guardar la reserva: ${insertErr?.message ?? 'error desconocido'}. Si el problema persiste, contáctanos.` };
   }
 
   // --- 9) Notificar al Dueño por email (sin bloquear si falla) ---

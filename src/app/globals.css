@@ -212,16 +212,32 @@ h1, h2, h3, h4, .font-display {
   border-radius: 0;
 }
 
-/* Día ocupado (disabled): tachado con línea + fondo rojizo suave */
+/* Día ocupado (disabled): tachado con línea + fondo rojizo suave.
+   En móvil reforzamos el tachado para que sea fácil de ver. */
 .rdp-disabled .rdp-day_button {
   position: relative;
   background: var(--danger-light);
   color: var(--danger);
   cursor: not-allowed;
   text-decoration: line-through;
-  text-decoration-thickness: 1.5px;
+  text-decoration-thickness: 2.5px;
   text-decoration-color: var(--danger);
   opacity: 1;
+  font-weight: 600;
+}
+/* Asegurar contraste fuerte en móvil */
+@media (max-width: 768px) {
+  .rdp-disabled .rdp-day_button {
+    background: #fecaca; /* rojo claro más visible */
+    color: #991b1b;
+    text-decoration-thickness: 3px;
+  }
+  .rdp-root {
+    --rdp-day-height: 2.75rem;
+    --rdp-day-width: 2.75rem;
+    --rdp-day_button-height: 2.75rem;
+    --rdp-day_button-width: 2.75rem;
+  }
 }
 
 .rdp-today:not(.rdp-selected) .rdp-day_button {
