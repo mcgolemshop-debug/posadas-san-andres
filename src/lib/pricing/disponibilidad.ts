@@ -20,7 +20,10 @@ import type { ModalidadReserva } from './tipos';
 
 export interface ParametrosDisponibilidad {
   posada_id: string;
+  /** Apartamento individual (legacy). Si apartamentos_ids está poblado, este se ignora. */
   apartamento_id: string | null;
+  /** Multi-apto: lista de apartamentos a reservar simultáneamente. Vacío/null = usar apartamento_id. */
+  apartamentos_ids?: string[] | null;
   modalidad: ModalidadReserva;
   /** YYYY-MM-DD */
   fecha_inicio: string;
@@ -43,14 +46,22 @@ export async function validarDisponibilidad(
   supabase: SupabaseClient,
   params: ParametrosDisponibilidad,
 ): Promise<ResultadoDisponibilidad> {
-  // Buscamos reservas confirmadas en la misma posada cuyas fechas
-  // solapen con [fecha_inicio, fecha_fin).
+  // Lista de apartamentos a comparar (multi-apto soporte)
+  const aptosObjetivo: string[] =
+    params.apartamentos_ids && params.apartamentos_ids.length > 0
+      ? params.apartamentos_ids
+      : params.apartamento_id
+        ? [params.apartamento_id]
+        : [];
+
+  // Buscamos reservas confirmadas y NO eliminadas en la misma posada
+  // cuyas fechas solapen con [fecha_inicio, fecha_fin).
   const { data: candidatas, error } = await supabase
     .from('reservas')
-    .select('id, fecha_inicio, fecha_fin, modalidad, apartamento_id, apartamentos(nombre)')
+    .select('id, fecha_inicio, fecha_fin, modalidad, apartamento_id, apartamentos_ids, apartamentos(nombre)')
     .eq('posada_id', params.posada_id)
     .eq('estado', 'confirmada')
-    // Solapamiento: existente.fecha_inicio < nueva.fecha_fin AND existente.fecha_fin > nueva.fecha_inicio
+    .is('eliminada_at', null)
     .lt('fecha_inicio', params.fecha_fin)
     .gt('fecha_fin', params.fecha_inicio);
 
@@ -60,13 +71,17 @@ export async function validarDisponibilidad(
 
   const conflictosBrutos = candidatas ?? [];
 
-  // Filtrar según modalidad
   let conflictos = conflictosBrutos;
   if (params.modalidad === 'apartamento') {
-    // Choca con: mismo apartamento, o cualquier "completa" de la posada
-    conflictos = conflictosBrutos.filter(
-      (c) => c.apartamento_id === params.apartamento_id || c.modalidad === 'completa',
-    );
+    // Choca con: alguno de mis aptos coincide con su(s) apto(s), o ella es completa
+    conflictos = conflictosBrutos.filter((c) => {
+      if (c.modalidad === 'completa') return true;
+      const susAptos: string[] = Array.isArray(c.apartamentos_ids)
+        ? (c.apartamentos_ids as string[])
+        : c.apartamento_id ? [c.apartamento_id as string] : [];
+      // Hay choque si CUALQUIER apto coincide
+      return susAptos.some((a) => aptosObjetivo.includes(a));
+    });
   }
   // Si modalidad === 'completa', choca con CUALQUIERA → no filtramos
 

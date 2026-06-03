@@ -18,14 +18,11 @@ import type {
 /**
  * Enumera todas las noches del rango [fecha_inicio, fecha_fin), exclusivo en el fin.
  * La noche del check-out NO se cobra (convención hotelera).
- *
- * Trabajamos en strings YYYY-MM-DD para evitar dolores de cabeza con zona horaria;
- * las reservas son date-only, no datetime.
  */
 export function enumerarNoches(fecha_inicio: string, fecha_fin: string): string[] {
   if (fecha_fin <= fecha_inicio) return [];
   const noches: string[] = [];
-  let actual = new Date(fecha_inicio + 'T12:00:00Z'); // 12pm UTC para evitar DST
+  let actual = new Date(fecha_inicio + 'T12:00:00Z');
   const fin = new Date(fecha_fin + 'T12:00:00Z');
   while (actual < fin) {
     noches.push(actual.toISOString().slice(0, 10));
@@ -36,16 +33,12 @@ export function enumerarNoches(fecha_inicio: string, fecha_fin: string): string[
 
 /**
  * Para una fecha dada, retorna la temporada de mayor prioridad que la incluye.
- * Si ninguna temporada con fechas la incluye, retorna la temporada "Baja"
- * (la que tiene fecha_inicio/fecha_fin en NULL).
  */
 export function determinarTemporada(
   fecha: string,
   temporadas: TemporadaInfo[],
 ): TemporadaInfo | null {
   const activas = temporadas.filter((t) => t.activa);
-
-  // Candidatas: temporadas con fechas que incluyen esta fecha
   const candidatas = activas.filter(
     (t) =>
       t.fecha_inicio !== null &&
@@ -53,21 +46,15 @@ export function determinarTemporada(
       fecha >= t.fecha_inicio &&
       fecha <= t.fecha_fin,
   );
-
   if (candidatas.length > 0) {
-    // La de mayor prioridad
     return candidatas.reduce((mejor, t) => (t.prioridad > mejor.prioridad ? t : mejor));
   }
-
-  // Fallback: la temporada "Baja" (sin fechas)
   const baja = activas.find((t) => t.fecha_inicio === null && t.fecha_fin === null);
   return baja ?? null;
 }
 
 /**
- * Busca el precio en USD para una combinación dada. Si hay precio exacto con
- * num_personas, lo usa; si no, busca el precio "plano" con num_personas=null.
- * Devuelve null si no encuentra precio.
+ * Busca el precio en USD para una combinación dada.
  */
 export function buscarPrecio(
   precios: PrecioInfo[],
@@ -77,8 +64,6 @@ export function buscarPrecio(
   num_personas: number,
 ): number | null {
   const activos = precios.filter((p) => p.activo);
-
-  // Match exacto con num_personas (Beach baja: 12/16/20)
   const exacto = activos.find(
     (p) =>
       p.posada_id === posada_id &&
@@ -87,8 +72,6 @@ export function buscarPrecio(
       p.num_personas === num_personas,
   );
   if (exacto) return exacto.precio_usd;
-
-  // Fallback: precio plano (num_personas null)
   const plano = activos.find(
     (p) =>
       p.posada_id === posada_id &&
@@ -100,24 +83,40 @@ export function buscarPrecio(
 }
 
 /**
- * Cálculo principal: precio prorrateado noche por noche.
+ * Cálculo principal: precio prorrateado noche por noche + extras + descuento.
  *
- * Reglas implementadas:
+ * Fórmula:
+ *   subtotal = sum(precio_noche × cantidad_apartamentos por cada noche)
+ *   extras_personas = num_personas_extras × promedio_costo_extra × num_noches
+ *   total = subtotal + extras_personas + servicio_extra − descuento
+ *
+ * Reglas:
  *   1. La noche del check-out NO se cobra.
  *   2. Cada noche se cobra con la tarifa de su temporada (mayor prioridad gana).
- *   3. Estadía mínima exigida = máxima de las temporadas que toca el rango.
- *   4. Si alguna noche cae en una temporada con fuerza_completa_confort=true
- *      y la posada es Confort y modalidad=apartamento → advertencia bloqueante.
- *   5. Si falta el precio de alguna combinación → marca tiene_errores=true.
+ *   3. cantidad_apartamentos > 1 multiplica el precio por noche (multi-apto en Confort).
+ *   4. Estadía mínima exigida = máxima de las temporadas que toca el rango.
+ *   5. Si alguna noche cae en fuerza_completa_confort=true y modalidad=apartamento
+ *      en Confort → error bloqueante.
+ *   6. Si falta el precio de alguna combinación → tiene_errores=true.
+ *   7. Descuento se resta del total. No puede dejar el total negativo (se clamp a 0).
  */
 export function calcularPrecioReserva(params: ParametrosCalculoPrecio): ResultadoPrecio {
   const advertencias: string[] = [];
   let tiene_errores = false;
 
+  const cantidad_apartamentos = Math.max(1, params.cantidad_apartamentos ?? 1);
+  const num_personas_extras = Math.max(0, params.num_personas_extras ?? 0);
+  const servicio_extra_usd = Math.max(0, params.servicio_extra_usd ?? 0);
+  const descuento_usd = Math.max(0, params.descuento_usd ?? 0);
+
   const noches_fechas = enumerarNoches(params.fecha_inicio, params.fecha_fin);
 
   if (noches_fechas.length === 0) {
     return {
+      subtotal_usd: 0,
+      extras_personas_usd: 0,
+      servicio_extra_usd,
+      descuento_usd,
       total_usd: 0,
       cantidad_noches: 0,
       noches: [],
@@ -139,7 +138,6 @@ export function calcularPrecioReserva(params: ParametrosCalculoPrecio): Resultad
       continue;
     }
 
-    // Regla 4: Confort en temporada especial solo permite "completa"
     if (
       params.posada_slug === 'confort' &&
       params.modalidad === 'apartamento' &&
@@ -176,6 +174,7 @@ export function calcularPrecioReserva(params: ParametrosCalculoPrecio): Resultad
       temporada_id: temp.id,
       temporada_nombre: temp.nombre,
       precio_usd: precio,
+      costo_extra_persona_usd: temp.costo_extra_persona_usd ?? 0,
     });
   }
 
@@ -197,7 +196,6 @@ export function calcularPrecioReserva(params: ParametrosCalculoPrecio): Resultad
     return tB - tA;
   });
 
-  // Estadía mínima: la mayor de todas las temporadas tocadas
   const estadia_minima_exigida = temporadas_aplicadas.reduce((max, t) => {
     const tempData = params.temporadas.find((x) => x.id === t.id);
     return tempData ? Math.max(max, tempData.estadia_minima_noches) : max;
@@ -212,9 +210,29 @@ export function calcularPrecioReserva(params: ParametrosCalculoPrecio): Resultad
     );
   }
 
-  const total_usd = noches.reduce((sum, n) => sum + n.precio_usd, 0);
+  // Subtotal = precio base de noches × cantidad de apartamentos seleccionados
+  const subtotal_usd = noches.reduce((sum, n) => sum + n.precio_usd, 0) * cantidad_apartamentos;
+
+  // Extras por persona: sum por noche de (extras × costo_extra_de_esa_noche)
+  const extras_personas_usd = noches.reduce(
+    (sum, n) => sum + num_personas_extras * n.costo_extra_persona_usd,
+    0,
+  );
+
+  const totalSinDescuento = subtotal_usd + extras_personas_usd + servicio_extra_usd;
+  const total_usd = Math.max(0, totalSinDescuento - descuento_usd);
+
+  if (descuento_usd > totalSinDescuento) {
+    advertencias.push(
+      `El descuento ($${descuento_usd}) es mayor que el total ($${totalSinDescuento}). Se aplicó como total = $0.`,
+    );
+  }
 
   return {
+    subtotal_usd,
+    extras_personas_usd,
+    servicio_extra_usd,
+    descuento_usd,
     total_usd,
     cantidad_noches,
     noches,
