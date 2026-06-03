@@ -31,6 +31,7 @@ export default async function ReservasPage({ searchParams }: PageProps) {
     .select(
       'id, fecha_inicio, fecha_fin, estado, modalidad, total_usd, cliente_nombre, num_personas, created_at, posadas(slug, nombre), apartamentos(nombre)',
     )
+    .is('eliminada_at', null)
     .order('created_at', { ascending: false })
     .limit(200);
 

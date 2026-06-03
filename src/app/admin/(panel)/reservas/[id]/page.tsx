@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Pencil, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getSesionAdminEstricto } from '@/lib/auth/session';
 import { formatoFechaCorta, formatoFechaLarga, formatoUSD } from '@/lib/formato';
 import { AccionesReserva } from '@/components/acciones-reserva';
+import { EliminarReservaBtn } from '@/components/eliminar-reserva-btn';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Detalle de reserva' };
@@ -48,6 +50,21 @@ export default async function ReservaDetallePage({ params }: PageProps) {
     comprobanteUrl = signed?.signedUrl ?? null;
   }
 
+  // Pagos asociados (no eliminados) y cálculo de saldo pendiente
+  const { data: pagosReserva } = await supabase
+    .from('pagos')
+    .select('id, monto_bruto_usd, monto_neto_usd, canal, fecha_pago, notas')
+    .eq('reserva_id', r.id)
+    .is('eliminado_at', null)
+    .order('fecha_pago', { ascending: false });
+  const pagadoTotal = (pagosReserva ?? []).reduce((s, p) => s + Number(p.monto_neto_usd), 0);
+  const saldoPendiente = Number(r.total_usd) - pagadoTotal;
+
+  // Permisos de edición/eliminación
+  const puedeEditarBorrar =
+    sesion.perfil.rol === 'dueno' ||
+    (sesion.perfil.rol === 'vulcanos' && r.gestor_id === sesion.user_id);
+
   // ¿Este usuario puede tomar acciones (confirmar/rechazar)?
   const puedeAccionar =
     (r.estado === 'pendiente') &&
@@ -78,7 +95,20 @@ export default async function ReservaDetallePage({ params }: PageProps) {
             Solicitada el {formatoFechaLarga((r.created_at as string).slice(0, 10))}
           </p>
         </div>
-        <BadgeEstadoGrande estado={r.estado as string} />
+        <div className="flex items-center gap-2">
+          <BadgeEstadoGrande estado={r.estado as string} />
+          {puedeEditarBorrar && (
+            <>
+              <Link
+                href={`/admin/reservas/${r.id}/editar`}
+                className="inline-flex items-center gap-1 px-3 py-1.5 border border-[var(--border)] rounded-md text-sm hover:bg-[var(--background)] text-[var(--foreground)]"
+              >
+                <Pencil className="w-3.5 h-3.5" /> Editar
+              </Link>
+              <EliminarReservaBtn reservaId={r.id as string} />
+            </>
+          )}
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-[1fr_320px] gap-6">
@@ -122,12 +152,53 @@ export default async function ReservaDetallePage({ params }: PageProps) {
         {/* Sidebar: total, comprobante, acciones */}
         <aside className="space-y-4">
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5">
-            <p className="text-xs uppercase tracking-widest text-[var(--muted)] mb-1">Total</p>
+            <p className="text-xs uppercase tracking-widest text-[var(--muted)] mb-1">Total reserva</p>
             <p className="text-3xl font-bold text-[var(--primary)]">
               {formatoUSD(Number(r.total_usd))}
             </p>
             <p className="text-xs text-[var(--muted)] mt-1">USD</p>
+
+            {/* Saldo pendiente */}
+            <div className="mt-4 pt-4 border-t border-[var(--border-subtle)] space-y-1.5 text-sm">
+              <div className="flex justify-between">
+                <span className="text-[var(--foreground-muted)]">Pagado</span>
+                <span className="text-emerald-700 font-medium">{formatoUSD(pagadoTotal)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--foreground-muted)]">Saldo pendiente</span>
+                <span className={`font-semibold ${saldoPendiente <= 0 ? 'text-emerald-700' : 'text-amber-700'}`}>
+                  {formatoUSD(Math.max(0, saldoPendiente))}
+                </span>
+              </div>
+              {saldoPendiente <= 0 && (
+                <p className="text-xs text-emerald-700 font-medium mt-2 flex items-center gap-1">
+                  ✓ Reserva pagada en su totalidad
+                </p>
+              )}
+            </div>
           </div>
+
+          {/* Lista de pagos */}
+          {(pagosReserva ?? []).length > 0 && (
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5">
+              <p className="font-semibold mb-3 text-sm">Pagos asociados ({(pagosReserva ?? []).length})</p>
+              <ul className="space-y-2 text-xs">
+                {(pagosReserva ?? []).map((p) => (
+                  <li key={p.id as string} className="flex justify-between gap-2 border-b border-[var(--border-subtle)] last:border-0 pb-2 last:pb-0">
+                    <div>
+                      <p className="font-medium">{formatoUSD(Number(p.monto_neto_usd))}</p>
+                      <p className="text-[var(--foreground-muted)] capitalize">
+                        {(p.canal as string).replace('_', ' ')} · {formatoFechaCorta(p.fecha_pago as string)}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <Link href="/admin/pagos" className="block mt-3 text-xs text-[var(--primary)] hover:underline">
+                Gestionar pagos →
+              </Link>
+            </div>
+          )}
 
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5">
             <p className="font-semibold mb-2">Comprobante de pago</p>

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { exigirRol } from '@/lib/auth/session';
 import { PagoFormCrear } from '@/components/pago-form-crear';
+import { EliminarPagoBtn } from '@/components/eliminar-pago-btn';
 import { formatoFechaCorta, formatoUSD } from '@/lib/formato';
 
 export const dynamic = 'force-dynamic';
@@ -30,6 +31,7 @@ export default async function PagosPage({ searchParams }: PageProps) {
     .select(
       'id, monto_bruto_usd, comision_retenida_usd, monto_neto_usd, canal, fecha_pago, notas, reservas(id, cliente_nombre, posadas(nombre))',
     )
+    .is('eliminado_at', null)
     .order('fecha_pago', { ascending: false })
     .limit(500);
   if (canal && canal in CANALES_LABEL) q = q.eq('canal', canal);
@@ -116,6 +118,7 @@ export default async function PagosPage({ searchParams }: PageProps) {
                 <Th className="text-right">Bruto</Th>
                 <Th className="text-right">Comisión</Th>
                 <Th className="text-right">Neto</Th>
+                <Th></Th>
               </tr>
             </thead>
             <tbody>
@@ -143,6 +146,11 @@ export default async function PagosPage({ searchParams }: PageProps) {
                     <Td className="text-right font-medium text-[var(--primary)]">
                       {formatoUSD(Number(p.monto_neto_usd))}
                     </Td>
+                    <Td>
+                      {sesion.perfil.rol === 'dueno' && (
+                        <EliminarPagoBtn pagoId={p.id as string} />
+                      )}
+                    </Td>
                   </tr>
                 );
               })}
@@ -154,7 +162,7 @@ export default async function PagosPage({ searchParams }: PageProps) {
   );
 }
 
-function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+function Th({ children, className = '' }: { children?: React.ReactNode; className?: string }) {
   return <th className={`text-left text-xs font-semibold uppercase tracking-wide text-[var(--muted)] px-4 py-3 ${className}`}>{children}</th>;
 }
 function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {

@@ -6,6 +6,8 @@ import {
   actualizarApartamento,
   guardarTemporada,
   upsertPrecio,
+  eliminarTemporada,
+  eliminarPrecio,
 } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -156,6 +158,16 @@ export default async function PosadasConfigPage() {
                 </span>
               </summary>
               <FormTemporada t={t} />
+              {/* Eliminar temporada */}
+              {!(t.nombre as string).toLowerCase().startsWith('baja') && (
+                <form action={eliminarTemporada} className="p-3 border-t border-[var(--border)] flex items-center gap-2 bg-red-50/50">
+                  <input type="hidden" name="temporada_id" value={t.id as string} />
+                  <span className="text-xs text-red-700 flex-1">Si esta temporada ya no aplica, puedes eliminarla. Solo si no tiene precios asociados.</span>
+                  <button type="submit" className="text-xs px-3 py-1.5 border border-red-300 text-red-700 rounded hover:bg-red-100">
+                    🗑 Eliminar temporada
+                  </button>
+                </form>
+              )}
             </details>
           ))}
         </div>
@@ -182,6 +194,7 @@ export default async function PosadasConfigPage() {
                 <Th>Modalidad</Th>
                 <Th>Pax</Th>
                 <Th>USD/noche</Th>
+                <Th></Th>
                 <Th></Th>
               </tr>
             </thead>
@@ -220,6 +233,14 @@ export default async function PosadasConfigPage() {
                       <span className={`text-xs ${p.activo ? 'text-emerald-700' : 'text-gray-400'}`}>
                         {p.activo ? '● activo' : '○ inactivo'}
                       </span>
+                    </Td>
+                    <Td>
+                      <form action={eliminarPrecio} className="inline">
+                        <input type="hidden" name="precio_id" value={p.id as string} />
+                        <button type="submit" className="text-xs px-2 py-1 border border-red-200 text-red-700 rounded hover:bg-red-50" title="Eliminar este precio">
+                          🗑
+                        </button>
+                      </form>
                     </Td>
                   </tr>
                 );

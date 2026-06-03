@@ -207,3 +207,154 @@ function pickFirst<T>(value: unknown): T | null {
   if (Array.isArray(value)) return (value[0] as T) ?? null;
   return (value as T) ?? null;
 }
+
+// =====================================================================
+// Editar reserva (Onda 5)
+// =====================================================================
+const editarSchema = z.object({
+  reserva_id: z.string().uuid(),
+  fecha_inicio: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  fecha_fin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  modalidad: z.enum(['apartamento', 'completa']),
+  apartamento_id: z.string().uuid().nullable().optional(),
+  apartamentos_ids: z.array(z.string().uuid()).default([]),
+  num_personas: z.coerce.number().int().positive().max(50),
+  num_personas_extras: z.coerce.number().int().min(0).max(50).default(0),
+  cliente_nombre: z.string().min(1).max(200),
+  cliente_telefono: z.string().min(1).max(50),
+  cliente_email: z.string().email().max(200),
+  notas: z.string().max(2000).optional().nullable(),
+  descuento_usd: z.coerce.number().min(0).default(0),
+  servicio_extra_usd: z.coerce.number().min(0).default(0),
+  total_usd: z.coerce.number().min(0),
+});
+
+export async function editarReserva(
+  _prev: EstadoAccion | null,
+  formData: FormData,
+): Promise<EstadoAccion> {
+  const sesion = await getSesionAdminEstricto();
+
+  const aptosIds = formData.getAll('apartamentos_ids').filter((v): v is string => typeof v === 'string' && v.length > 0);
+  const apto = formData.get('apartamento_id');
+  const datos = {
+    reserva_id: formData.get('reserva_id'),
+    fecha_inicio: formData.get('fecha_inicio'),
+    fecha_fin: formData.get('fecha_fin'),
+    modalidad: formData.get('modalidad'),
+    apartamento_id: apto && apto !== '' ? apto : null,
+    apartamentos_ids: aptosIds,
+    num_personas: formData.get('num_personas'),
+    num_personas_extras: formData.get('num_personas_extras') || 0,
+    cliente_nombre: formData.get('cliente_nombre'),
+    cliente_telefono: formData.get('cliente_telefono'),
+    cliente_email: formData.get('cliente_email'),
+    notas: formData.get('notas') || null,
+    descuento_usd: formData.get('descuento_usd') || 0,
+    servicio_extra_usd: formData.get('servicio_extra_usd') || 0,
+    total_usd: formData.get('total_usd'),
+  };
+
+  const v = editarSchema.safeParse(datos);
+  if (!v.success) return { error: v.error.issues[0]?.message ?? 'Datos inválidos.' };
+  const d = v.data;
+
+  const admin = createAdminClient();
+  const { data: r } = await admin
+    .from('reservas')
+    .select('id, estado, gestor_id')
+    .eq('id', d.reserva_id)
+    .maybeSingle();
+  if (!r) return { error: 'Reserva no encontrada.' };
+
+  // Permisos: Dueño todo. Vulcanos solo las suyas.
+  if (sesion.perfil.rol === 'conserje' || sesion.perfil.rol === 'contador') {
+    return { error: 'Tu rol no puede editar reservas.' };
+  }
+  if (sesion.perfil.rol === 'vulcanos' && r.gestor_id !== sesion.user_id) {
+    return { error: 'Solo puedes editar reservas que tú gestionas.' };
+  }
+
+  const { error } = await admin
+    .from('reservas')
+    .update({
+      fecha_inicio: d.fecha_inicio,
+      fecha_fin: d.fecha_fin,
+      modalidad: d.modalidad,
+      apartamento_id: d.apartamento_id ?? null,
+      apartamentos_ids: d.apartamentos_ids.length > 0 ? d.apartamentos_ids : null,
+      num_personas: d.num_personas,
+      num_personas_extras: d.num_personas_extras,
+      cliente_nombre: d.cliente_nombre,
+      cliente_telefono: d.cliente_telefono,
+      cliente_email: d.cliente_email,
+      notas: d.notas,
+      descuento_usd: d.descuento_usd,
+      servicio_extra_usd: d.servicio_extra_usd,
+      total_usd: d.total_usd,
+    })
+    .eq('id', d.reserva_id);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/admin/reservas/${d.reserva_id}`);
+  revalidatePath('/admin/reservas');
+  return { ok: 'Reserva actualizada.' };
+}
+
+// =====================================================================
+// Eliminar reserva (soft-delete)
+// =====================================================================
+export async function eliminarReserva(
+  _prev: EstadoAccion | null,
+  formData: FormData,
+): Promise<EstadoAccion> {
+  const sesion = await getSesionAdminEstricto();
+  const id = idSchema.safeParse(formData.get('reserva_id'));
+  if (!id.success) return { error: 'ID inválido.' };
+
+  const admin = createAdminClient();
+  const { data: r } = await admin
+    .from('reservas')
+    .select('id, estado, gestor_id')
+    .eq('id', id.data)
+    .maybeSingle();
+  if (!r) return { error: 'Reserva no encontrada.' };
+
+  if (sesion.perfil.rol === 'conserje' || sesion.perfil.rol === 'contador') {
+    return { error: 'Tu rol no puede eliminar reservas.' };
+  }
+  if (sesion.perfil.rol === 'vulcanos' && r.gestor_id !== sesion.user_id) {
+    return { error: 'Solo puedes eliminar reservas que tú gestionas.' };
+  }
+
+  const { error } = await admin
+    .from('reservas')
+    .update({ eliminada_at: new Date().toISOString() })
+    .eq('id', id.data);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/admin/reservas/${id.data}`);
+  revalidatePath('/admin/reservas');
+  return { ok: 'Reserva eliminada.' };
+}
+
+export async function restaurarReserva(
+  _prev: EstadoAccion | null,
+  formData: FormData,
+): Promise<EstadoAccion> {
+  const sesion = await getSesionAdminEstricto();
+  if (sesion.perfil.rol !== 'dueno') return { error: 'Solo el Dueño puede restaurar reservas.' };
+
+  const id = idSchema.safeParse(formData.get('reserva_id'));
+  if (!id.success) return { error: 'ID inválido.' };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from('reservas')
+    .update({ eliminada_at: null })
+    .eq('id', id.data);
+  if (error) return { error: error.message };
+
+  revalidatePath('/admin/reservas');
+  return { ok: 'Reserva restaurada.' };
+}

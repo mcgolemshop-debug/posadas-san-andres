@@ -55,5 +55,90 @@ export async function registrarPago(
   if (error) return { error: error.message };
 
   revalidatePath('/admin/pagos');
+  revalidatePath(`/admin/reservas/${d.data.reserva_id}`);
   return { ok: 'Pago registrado.' };
+}
+
+// =====================================================================
+// Editar pago
+// =====================================================================
+const editarPagoSchema = z.object({
+  pago_id: z.string().uuid(),
+  canal: z.enum(CANALES),
+  monto_bruto_usd: z.coerce.number().positive(),
+  comision_retenida_usd: z.coerce.number().min(0).default(0),
+  fecha_pago: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  notas: z.string().max(500).optional().nullable(),
+});
+
+export async function editarPago(
+  _prev: EstadoPago | null,
+  formData: FormData,
+): Promise<EstadoPago> {
+  await exigirRol(['dueno']);
+  const d = editarPagoSchema.safeParse({
+    pago_id: formData.get('pago_id'),
+    canal: formData.get('canal'),
+    monto_bruto_usd: formData.get('monto_bruto_usd'),
+    comision_retenida_usd: formData.get('comision_retenida_usd') || 0,
+    fecha_pago: formData.get('fecha_pago'),
+    notas: formData.get('notas') || null,
+  });
+  if (!d.success) return { error: d.error.issues[0]?.message ?? 'Datos inválidos.' };
+
+  if (d.data.comision_retenida_usd > d.data.monto_bruto_usd) {
+    return { error: 'La comisión retenida no puede ser mayor al monto bruto.' };
+  }
+
+  const admin = createAdminClient();
+  const { data: p } = await admin
+    .from('pagos')
+    .select('reserva_id')
+    .eq('id', d.data.pago_id)
+    .maybeSingle();
+
+  const { error } = await admin
+    .from('pagos')
+    .update({
+      canal: d.data.canal,
+      monto_bruto_usd: d.data.monto_bruto_usd,
+      comision_retenida_usd: d.data.comision_retenida_usd,
+      fecha_pago: d.data.fecha_pago,
+      notas: d.data.notas,
+    })
+    .eq('id', d.data.pago_id);
+  if (error) return { error: error.message };
+
+  revalidatePath('/admin/pagos');
+  if (p?.reserva_id) revalidatePath(`/admin/reservas/${p.reserva_id}`);
+  return { ok: 'Pago actualizado.' };
+}
+
+// =====================================================================
+// Eliminar pago (soft-delete)
+// =====================================================================
+export async function eliminarPago(
+  _prev: EstadoPago | null,
+  formData: FormData,
+): Promise<EstadoPago> {
+  await exigirRol(['dueno']);
+  const id = z.string().uuid().safeParse(formData.get('pago_id'));
+  if (!id.success) return { error: 'ID inválido.' };
+
+  const admin = createAdminClient();
+  const { data: p } = await admin
+    .from('pagos')
+    .select('reserva_id')
+    .eq('id', id.data)
+    .maybeSingle();
+
+  const { error } = await admin
+    .from('pagos')
+    .update({ eliminado_at: new Date().toISOString() })
+    .eq('id', id.data);
+  if (error) return { error: error.message };
+
+  revalidatePath('/admin/pagos');
+  if (p?.reserva_id) revalidatePath(`/admin/reservas/${p.reserva_id}`);
+  return { ok: 'Pago eliminado.' };
 }

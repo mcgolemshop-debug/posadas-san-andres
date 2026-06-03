@@ -105,6 +105,48 @@ export async function guardarTemporada(formData: FormData): Promise<void> {
 }
 
 // =====================================================================
+// Eliminar temporada
+// =====================================================================
+const eliminarTemporadaSchema = z.object({ temporada_id: z.string().uuid() });
+
+export async function eliminarTemporada(formData: FormData): Promise<void> {
+  await exigirRol(['dueno']);
+  const d = eliminarTemporadaSchema.parse({
+    temporada_id: formData.get('temporada_id'),
+  });
+  const admin = createAdminClient();
+
+  // No permitir borrar si hay precios o reservas asociadas
+  const { count: preciosCount } = await admin
+    .from('precios')
+    .select('id', { count: 'exact', head: true })
+    .eq('temporada_id', d.temporada_id);
+  if ((preciosCount ?? 0) > 0) {
+    throw new Error('No se puede eliminar: hay precios asociados a esta temporada. Bórralos primero.');
+  }
+
+  const { error } = await admin.from('temporadas').delete().eq('id', d.temporada_id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/posadas');
+}
+
+// =====================================================================
+// Eliminar precio
+// =====================================================================
+const eliminarPrecioSchema = z.object({ precio_id: z.string().uuid() });
+
+export async function eliminarPrecio(formData: FormData): Promise<void> {
+  await exigirRol(['dueno']);
+  const d = eliminarPrecioSchema.parse({
+    precio_id: formData.get('precio_id'),
+  });
+  const admin = createAdminClient();
+  const { error } = await admin.from('precios').delete().eq('id', d.precio_id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/posadas');
+}
+
+// =====================================================================
 // Upsert precio
 // =====================================================================
 const precioSchema = z.object({
