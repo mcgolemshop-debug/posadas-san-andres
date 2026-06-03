@@ -212,31 +212,44 @@ h1, h2, h3, h4, .font-display {
   border-radius: 0;
 }
 
-/* Día ocupado (disabled): tachado con línea + fondo rojizo suave.
-   En móvil reforzamos el tachado para que sea fácil de ver. */
+/* Día pasado o no disponible (genérico): gris sutil, sin tachado.
+   Visualmente comunican "no aplican" sin alarmar. */
 .rdp-disabled .rdp-day_button {
-  position: relative;
-  background: var(--danger-light);
-  color: var(--danger);
+  background: transparent;
+  color: var(--foreground-subtle);
+  opacity: 0.35;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+/* Día OCUPADO (reserva confirmada): rojo destacado con tachado claro.
+   Esta clase suplanta el estilo de .rdp-disabled gracias a la especificidad
+   y al orden (se declara después). */
+.rdp-ocupado .rdp-day_button,
+.rdp-disabled.rdp-ocupado .rdp-day_button {
+  background: #fee2e2;
+  color: #b91c1c;
   cursor: not-allowed;
   text-decoration: line-through;
   text-decoration-thickness: 2.5px;
-  text-decoration-color: var(--danger);
+  text-decoration-color: #b91c1c;
   opacity: 1;
-  font-weight: 600;
+  font-weight: 700;
+  border: 1px solid #fca5a5;
 }
-/* Asegurar contraste fuerte en móvil */
+
+/* En móvil aumentamos tamaño de los días para mejor toque */
 @media (max-width: 768px) {
-  .rdp-disabled .rdp-day_button {
-    background: #fecaca; /* rojo claro más visible */
-    color: #991b1b;
-    text-decoration-thickness: 3px;
-  }
   .rdp-root {
     --rdp-day-height: 2.75rem;
     --rdp-day-width: 2.75rem;
     --rdp-day_button-height: 2.75rem;
     --rdp-day_button-width: 2.75rem;
+  }
+  .rdp-ocupado .rdp-day_button,
+  .rdp-disabled.rdp-ocupado .rdp-day_button {
+    background: #fecaca;
+    text-decoration-thickness: 3px;
   }
 }
 

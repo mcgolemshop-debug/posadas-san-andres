@@ -163,6 +163,19 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
     null,
   );
 
+  // Scroll automático al banner de error cuando aparece, útil en móvil
+  // donde el error puede quedar fuera de la pantalla.
+  useEffect(() => {
+    if (estadoEnvio?.error) {
+      // Pequeño delay para que el DOM renderice el banner antes de scrollear
+      const t = setTimeout(() => {
+        const el = document.getElementById('reserva-form-error');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+      return () => clearTimeout(t);
+    }
+  }, [estadoEnvio?.error]);
+
   const cantidadApartamentos = modalidad === 'apartamento' ? aptosSeleccionados.length : 1;
 
   const resultado = useMemo(() => {
@@ -213,8 +226,15 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
               mode="range"
               selected={rango}
               onSelect={setRango}
+              modifiers={{
+                /* Reservas confirmadas — solo estas se ven en rojo tachado */
+                ocupado: fechasOcupadas,
+              }}
+              modifiersClassNames={{
+                ocupado: 'rdp-ocupado',
+              }}
               disabled={[
-                { before: addDays(startOfToday(), 1) }, // no hoy ni atrás (llegada mínimo mañana)
+                { before: addDays(startOfToday(), 1) }, // no hoy ni atrás
                 ...fechasOcupadas.map((d) => ({ from: d, to: d })),
               ]}
               numberOfMonths={numMeses}
@@ -222,6 +242,22 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
               locale={es}
               showOutsideDays={false}
             />
+          </div>
+
+          {/* Leyenda explícita debajo del calendario */}
+          <div className="mt-3 flex flex-wrap gap-3 text-xs text-[var(--foreground-muted)]">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-[var(--danger-light)] border border-[var(--danger)]/40 text-[var(--danger)] font-bold text-[10px]">×</span>
+              <span><strong className="text-[var(--danger)]">Ocupado</strong> (ya reservado)</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-gray-100 text-gray-400 text-[10px]">−</span>
+              <span>Días pasados</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-white border border-[var(--border-strong)] text-[var(--foreground)] font-medium text-[10px]">●</span>
+              <span><strong>Disponible</strong></span>
+            </span>
           </div>
 
           {/* Lista de próximas fechas ocupadas — visible especialmente en móvil
@@ -461,9 +497,16 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
         </div>
 
         {estadoEnvio?.error && (
-          <div className="bg-[var(--danger-light)] border border-[var(--danger)] rounded-xl p-4 flex gap-2 text-sm text-[var(--danger)]">
-            <AlertCircle className="w-5 h-5 shrink-0" />
-            <span>{estadoEnvio.error}</span>
+          <div
+            id="reserva-form-error"
+            role="alert"
+            className="bg-[var(--danger-light)] border-2 border-[var(--danger)] rounded-xl p-4 flex gap-3 text-sm text-[var(--danger)] shadow-md animate-in"
+          >
+            <AlertCircle className="w-6 h-6 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-semibold mb-1">No pudimos enviar la reserva</p>
+              <p className="text-[var(--foreground)]">{estadoEnvio.error}</p>
+            </div>
           </div>
         )}
 

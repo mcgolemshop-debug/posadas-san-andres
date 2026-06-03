@@ -94,6 +94,8 @@ export function CalendarioDisponibilidad({
           mode="single"
           selected={undefined}
           onSelect={() => {}}
+          modifiers={{ ocupado: fechasOcupadas }}
+          modifiersClassNames={{ ocupado: 'rdp-ocupado' }}
           disabled={fechasOcupadas.map((d) => ({ from: d, to: d }))}
           numberOfMonths={meses}
           startMonth={new Date()}
