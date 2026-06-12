@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
-import { DayPicker, type DateRange } from 'react-day-picker';
+import { DayPicker, type DateRange, type Matcher } from 'react-day-picker';
 import { es } from 'date-fns/locale';
 import { format, addDays, startOfToday } from 'date-fns';
 import {
@@ -129,6 +129,44 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
     return s;
   }, [fechasOcupadas]);
 
+  // Matchers de DayPicker — determinísticos según el estado del rango.
+  // Cuando el cliente está eligiendo el check-OUT (ya tiene check-in propio),
+  // permitimos cualquier día hasta el PRIMER día ocupado posterior INCLUSIVE
+  // (porque el cliente puede usarlo como su día de salida: sale a 12 m antes
+  // de que el otro entre a 2 PM). Pasado el primer día ocupado, bloqueamos.
+  const dayPickerDisabled = useMemo((): Matcher[] => {
+    const minDate = addDays(startOfToday(), 1);
+
+    if (rango?.from && !rango.to) {
+      // Buscar el primer día ocupado ESTRICTAMENTE DESPUÉS de rango.from.
+      let primerOcupado: Date | null = null;
+      let cursor = addDays(rango.from, 1);
+      for (let i = 0; i < 730; i++) {
+        if (fechasOcupadasIsoSet.has(format(cursor, 'yyyy-MM-dd'))) {
+          primerOcupado = new Date(cursor);
+          break;
+        }
+        cursor = addDays(cursor, 1);
+      }
+
+      const matchers: Matcher[] = [{ before: minDate }];
+      if (primerOcupado) {
+        // El día primerOcupado es VÁLIDO como check-out propio
+        // (sale a 12 m, el otro entra a 2 PM). Bloqueamos strictly después.
+        matchers.push({ after: primerOcupado });
+      }
+      return matchers;
+    }
+
+    // Caso inicial / con rango completo: bloquear pasado + todas las noches
+    // ocupadas (incluye check-ins existentes — el cliente no puede empezar
+    // su reserva ahí porque la noche está ocupada).
+    return [
+      { before: minDate },
+      ...fechasOcupadas.map((d) => ({ from: d, to: d })),
+    ];
+  }, [rango, fechasOcupadas, fechasOcupadasIsoSet]);
+
   // Si el cliente cambia modalidad/apto y el rango actual choca → limpiar
   // Usamos un ref para acceder al rango actual sin disparar el effect en cada render
   const rangoRef = useRef(rango);
@@ -224,32 +262,7 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
               modifiersClassNames={{
                 ocupado: 'rdp-ocupado',
               }}
-              disabled={(day) => {
-                // No permitir hoy ni días anteriores
-                if (day < addDays(startOfToday(), 1)) return true;
-
-                const iso = format(day, 'yyyy-MM-dd');
-
-                // Mientras el cliente está eligiendo el check-OUT (ya tiene check-in)
-                // el día puede ser cualquiera > check-in siempre que ninguna noche
-                // intermedia esté ocupada. Esto permite seleccionar el día fecha_inicio
-                // de una reserva existente (el cliente sale a 12 m, el existente entra a 2 PM).
-                if (rango?.from && !rango.to && day > rango.from) {
-                  let cursor = new Date(rango.from);
-                  while (cursor < day) {
-                    const cursorIso = format(cursor, 'yyyy-MM-dd');
-                    if (fechasOcupadasIsoSet.has(cursorIso)) return true;
-                    cursor = addDays(cursor, 1);
-                  }
-                  return false;
-                }
-
-                // Caso inicial / re-selección: bloquear solo noches ya ocupadas
-                // (esto incluye check-ins existentes, que NO se pueden usar como check-in propio).
-                // Los check-outs existentes (fecha_fin) NO están en este set →
-                // sí se pueden clickear como check-in propio.
-                return fechasOcupadasIsoSet.has(iso);
-              }}
+              disabled={dayPickerDisabled}
               numberOfMonths={numMeses}
               startMonth={new Date()}
               locale={es}
