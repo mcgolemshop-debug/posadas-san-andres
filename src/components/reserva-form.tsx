@@ -122,50 +122,58 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
   //   nochesPlenas ∪ checkIns. NO incluye checkOuts (esos son días libres por la tarde).
   const fechasOcupadas = useMemo(() => [...checkIns, ...nochesPlenas], [checkIns, nochesPlenas]);
 
-  // Para look-up rápido durante la validación de selección del rango
-  const fechasOcupadasIsoSet = useMemo(() => {
+  // Set ISO de checkIns para look-up rápido al validar
+  const checkInsIsoSet = useMemo(() => {
     const s = new Set<string>();
-    for (const d of fechasOcupadas) s.add(format(d, 'yyyy-MM-dd'));
+    for (const d of checkIns) s.add(format(d, 'yyyy-MM-dd'));
     return s;
-  }, [fechasOcupadas]);
+  }, [checkIns]);
 
-  // Matchers de DayPicker — determinísticos según el estado del rango.
-  // Cuando el cliente está eligiendo el check-OUT (ya tiene check-in propio),
-  // permitimos cualquier día hasta el PRIMER día ocupado posterior INCLUSIVE
-  // (porque el cliente puede usarlo como su día de salida: sale a 12 m antes
-  // de que el otro entre a 2 PM). Pasado el primer día ocupado, bloqueamos.
-  const dayPickerDisabled = useMemo((): Matcher[] => {
-    const minDate = addDays(startOfToday(), 1);
+  // `disabled` solo bloquea pasado + nochesPlenas (intermedias). Los días
+  // checkIn / checkOut de reservas existentes están VISUALMENTE en rojo
+  // (modifier `ocupado`) pero NO deshabilitados — se pueden hacer click.
+  // La validación final del rango se hace en `handleRangoSelect`.
+  // Mantener `disabled` estático (independiente de `rango`) evita el bug
+  // donde DayPicker cacheaba la prop al pasar de "sin rango" a "con rango".
+  const dayPickerDisabled = useMemo((): Matcher[] => [
+    { before: addDays(startOfToday(), 1) },
+    ...nochesPlenas.map((d) => ({ from: d, to: d })),
+  ], [nochesPlenas]);
 
-    if (rango?.from && !rango.to) {
-      // Buscar el primer día ocupado ESTRICTAMENTE DESPUÉS de rango.from.
-      let primerOcupado: Date | null = null;
-      let cursor = addDays(rango.from, 1);
-      for (let i = 0; i < 730; i++) {
-        if (fechasOcupadasIsoSet.has(format(cursor, 'yyyy-MM-dd'))) {
-          primerOcupado = new Date(cursor);
-          break;
-        }
-        cursor = addDays(cursor, 1);
-      }
-
-      const matchers: Matcher[] = [{ before: minDate }];
-      if (primerOcupado) {
-        // El día primerOcupado es VÁLIDO como check-out propio
-        // (sale a 12 m, el otro entra a 2 PM). Bloqueamos strictly después.
-        matchers.push({ after: primerOcupado });
-      }
-      return matchers;
+  // Handler que valida cada cambio de rango. Rechaza inicios inválidos
+  // (empezar en un día de check-in existente) y rangos que choquen con
+  // alguna noche ocupada.
+  const handleRangoSelect = (nuevo: DateRange | undefined) => {
+    if (!nuevo || !nuevo.from) {
+      setRango(nuevo);
+      return;
     }
 
-    // Caso inicial / con rango completo: bloquear pasado + todas las noches
-    // ocupadas (incluye check-ins existentes — el cliente no puede empezar
-    // su reserva ahí porque la noche está ocupada).
-    return [
-      { before: minDate },
-      ...fechasOcupadas.map((d) => ({ from: d, to: d })),
-    ];
-  }, [rango, fechasOcupadas, fechasOcupadasIsoSet]);
+    // Si está eligiendo solo el check-in (sin to): rechazar si es día de
+    // check-in de otra reserva (la noche está ocupada por otro).
+    if (!nuevo.to) {
+      const isoFrom = format(nuevo.from, 'yyyy-MM-dd');
+      if (checkInsIsoSet.has(isoFrom)) {
+        setAvisoLimpieza('Ese día está ocupado por otro huésped. Elige otro día de llegada.');
+        setTimeout(() => setAvisoLimpieza(null), 6000);
+        setRango(undefined);
+        return;
+      }
+      setRango(nuevo);
+      return;
+    }
+
+    // Rango completo: verificar que ninguna noche [from, to) esté ocupada.
+    const isoFrom = format(nuevo.from, 'yyyy-MM-dd');
+    const isoTo = format(nuevo.to, 'yyyy-MM-dd');
+    if (rangoChocaConOcupadas(isoFrom, isoTo, fechasOcupadas)) {
+      setAvisoLimpieza('Las fechas elegidas chocan con otra reserva. Por favor elige otras.');
+      setTimeout(() => setAvisoLimpieza(null), 6000);
+      setRango(undefined);
+      return;
+    }
+    setRango(nuevo);
+  };
 
   // Si el cliente cambia modalidad/apto y el rango actual choca → limpiar
   // Usamos un ref para acceder al rango actual sin disparar el effect en cada render
@@ -251,12 +259,10 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
             <DayPicker
               mode="range"
               selected={rango}
-              onSelect={setRango}
+              onSelect={handleRangoSelect}
               modifiers={{
                 // Visualmente, TODOS los días con cualquier ocupación se ven
                 // iguales (rojo tachado): noches plenas + check-ins + check-outs.
-                // La función `disabled` decide cuáles son clickeables como
-                // inicio o fin del rango propio.
                 ocupado: [...nochesPlenas, ...checkIns, ...checkOuts],
               }}
               modifiersClassNames={{
