@@ -33,12 +33,9 @@ export function CalendarioMes({ mes, posadaNombre, filas, reservas, esCompleta }
   const diasEnMes = new Date(anyo, mesNum, 0).getDate();
   const dias = Array.from({ length: diasEnMes }, (_, i) => i + 1);
 
-  // Pre-calcular cobertura por (filaId, dia): días "plenos" donde el huésped
-  // ocupa la noche entera (incluye fecha_inicio, excluye fecha_fin).
+  // Pre-calcular cobertura por (filaId, dia): incluye desde fecha_inicio
+  // hasta fecha_fin - 1 (noches ocupadas). El día fecha_fin queda libre.
   const cobertura = new Map<string, ReservaCalendar>();
-  // Mapa adicional: día de check-OUT (= fecha_fin) por (filaId, dia). La mañana
-  // está ocupada hasta las 12 m, pero la tarde es libre.
-  const checkOuts = new Map<string, ReservaCalendar>();
   for (const r of reservas) {
     const inicio = new Date(r.fecha_inicio + 'T12:00:00Z');
     const fin = new Date(r.fecha_fin + 'T12:00:00Z');
@@ -50,15 +47,6 @@ export function CalendarioMes({ mes, posadaNombre, filas, reservas, esCompleta }
         } else if (r.apartamento_id) {
           cobertura.set(`${r.apartamento_id}:${dia}`, r);
         }
-      }
-    }
-    // Check-out: solo si fecha_fin cae dentro del mes visible
-    if (fin.getUTCFullYear() === anyo && fin.getUTCMonth() + 1 === mesNum) {
-      const dia = fin.getUTCDate();
-      if (esCompleta(r)) {
-        for (const f of filas) checkOuts.set(`${f.id}:${dia}`, r);
-      } else if (r.apartamento_id) {
-        checkOuts.set(`${r.apartamento_id}:${dia}`, r);
       }
     }
   }
@@ -90,14 +78,6 @@ export function CalendarioMes({ mes, posadaNombre, filas, reservas, esCompleta }
     return palette[hash % palette.length];
   };
 
-  // Versión hex del color de la reserva — necesario para los gradients inline
-  // que usamos en celdas de check-in/check-out (mitad/mitad).
-  const colorHexPara = (id: string) => {
-    const palette = ['#10b981', '#06b6d4', '#8b5cf6', '#f43f5e', '#fb923c', '#3b82f6'];
-    let hash = 0;
-    for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-    return palette[hash % palette.length];
-  };
 
   return (
     <div>
@@ -161,32 +141,11 @@ export function CalendarioMes({ mes, posadaNombre, filas, reservas, esCompleta }
                 </td>
                 {dias.map((d) => {
                   const r = cobertura.get(`${f.id}:${d}`);
-                  const ckOut = checkOuts.get(`${f.id}:${d}`);
                   const ds = diaSemana(d);
                   const esFinDeSemana = ds === 0 || ds === 6;
 
-                  // CASO 1: celda totalmente libre (puede ser check-out solo si ckOut está)
+                  // Celda libre (sin cobertura ni checkout): blanco / fin de semana
                   if (!r) {
-                    if (ckOut) {
-                      // Solo check-out: mitad superior-izquierda con color del huésped que sale,
-                      // mitad inferior-derecha libre.
-                      const colorHex = colorHexPara(ckOut.id);
-                      return (
-                        <td
-                          key={d}
-                          className={`p-0 h-12 border-b border-[var(--border-subtle)] relative group ${
-                            esHoy(d) ? 'border-l-2 border-r-2 border-[var(--primary)]/30' : ''
-                          }`}
-                        >
-                          <Link
-                            href={`/admin/reservas/${ckOut.id}`}
-                            className="absolute inset-0 hover:brightness-95"
-                            style={{ background: `linear-gradient(90deg, ${colorHex} 0% 50%, transparent 50% 100%)` }}
-                            title={`${ckOut.cliente_nombre} sale ${ckOut.fecha_fin} a 12 m`}
-                          />
-                        </td>
-                      );
-                    }
                     return (
                       <td
                         key={d}
@@ -201,53 +160,6 @@ export function CalendarioMes({ mes, posadaNombre, filas, reservas, esCompleta }
                   const esPrimerDiaVisible = inicioEsHoy ||
                     (d === 1 && r.fecha_inicio < `${anyo}-${String(mesNum).padStart(2, '0')}-01`);
 
-                  // CASO 2: check-in + check-out back-to-back en la MISMA fila
-                  // (alguien sale a 12 m y otro entra a 2 PM ese mismo día)
-                  if (inicioEsHoy && ckOut && ckOut.id !== r.id) {
-                    const colorIn = colorHexPara(r.id);
-                    const colorOut = colorHexPara(ckOut.id);
-                    return (
-                      <td key={d} className="p-0 h-12 relative group">
-                        <Link
-                          href={`/admin/reservas/${ckOut.id}`}
-                          className="absolute inset-0 hover:brightness-95"
-                          style={{ background: `linear-gradient(90deg, ${colorOut} 0% 50%, transparent 50% 100%)` }}
-                          title={`${ckOut.cliente_nombre} sale ${ckOut.fecha_fin} a 12 m`}
-                        />
-                        <Link
-                          href={`/admin/reservas/${r.id}`}
-                          className="absolute inset-0 hover:brightness-95 flex items-end justify-end pr-1 pb-0.5"
-                          style={{ background: `linear-gradient(90deg, transparent 0% 50%, ${colorIn} 50% 100%)` }}
-                          title={`${r.cliente_nombre} entra ${r.fecha_inicio} a 2 PM`}
-                        >
-                          <span className="text-[9px] font-semibold text-white">
-                            {r.cliente_nombre.split(' ')[0].slice(0, 5)}
-                          </span>
-                        </Link>
-                      </td>
-                    );
-                  }
-
-                  // CASO 3: solo check-in (primer día visible de la reserva)
-                  if (inicioEsHoy) {
-                    const colorHex = colorHexPara(r.id);
-                    return (
-                      <td key={d} className="p-0 h-12 relative group">
-                        <Link
-                          href={`/admin/reservas/${r.id}`}
-                          className="absolute inset-0 hover:brightness-95 flex items-end justify-end pr-1 pb-0.5"
-                          style={{ background: `linear-gradient(90deg, transparent 0% 50%, ${colorHex} 50% 100%)` }}
-                          title={`${r.cliente_nombre} entra ${r.fecha_inicio} a 2 PM · sale ${r.fecha_fin}`}
-                        >
-                          <span className="text-[9px] font-semibold text-white">
-                            {r.cliente_nombre.split(' ')[0].slice(0, 6)}
-                          </span>
-                        </Link>
-                      </td>
-                    );
-                  }
-
-                  // CASO 4: día pleno cubierto (noche intermedia)
                   return (
                     <td
                       key={d}

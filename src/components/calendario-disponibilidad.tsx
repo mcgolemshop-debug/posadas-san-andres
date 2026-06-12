@@ -44,10 +44,13 @@ export function CalendarioDisponibilidad({
     { modalidad: 'completa'; apartamentoId: null } | { modalidad: 'apartamento'; apartamentoId: string }
   >({ modalidad: 'completa', apartamentoId: null });
 
-  const { nochesPlenas, checkIns, checkOuts } = useMemo(
-    () => calcularSplit(reservas, contexto, posadaSlug),
-    [reservas, contexto, posadaSlug],
-  );
+  // Para esta vista informativa NO permitimos selección, por lo que solo
+  // necesitamos UN set unificado: nochesPlenas + checkIns + checkOuts.
+  // Todos los días con cualquier ocupación se ven igual (rojo tachado).
+  const fechasOcupadasTodas = useMemo(() => {
+    const s = calcularSplit(reservas, contexto, posadaSlug);
+    return [...s.nochesPlenas, ...s.checkIns, ...s.checkOuts];
+  }, [reservas, contexto, posadaSlug]);
 
   return (
     <div>
@@ -77,12 +80,8 @@ export function CalendarioDisponibilidad({
           mode="single"
           selected={undefined}
           onSelect={() => {}}
-          modifiers={{ ocupado: nochesPlenas, checkin: checkIns, checkout: checkOuts }}
-          modifiersClassNames={{
-            ocupado: 'rdp-ocupado',
-            checkin: 'rdp-checkin',
-            checkout: 'rdp-checkout',
-          }}
+          modifiers={{ ocupado: fechasOcupadasTodas }}
+          modifiersClassNames={{ ocupado: 'rdp-ocupado' }}
           numberOfMonths={meses}
           startMonth={new Date()}
           locale={es}
@@ -90,15 +89,11 @@ export function CalendarioDisponibilidad({
         />
       </div>
 
-      {/* Leyenda — 3 estados claros */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4 text-xs text-[var(--foreground-muted)]">
+      {/* Leyenda — 2 estados */}
+      <div className="flex flex-wrap gap-4 mt-4 text-xs text-[var(--foreground-muted)]">
         <span className="flex items-center gap-2">
           <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-white border border-[var(--border-strong)] font-bold text-[12px]">15</span>
           <strong>Disponible</strong>
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-[#fef3c7] border border-[#fde68a] text-[#92400e] font-bold text-[12px]">12</span>
-          <strong>Día de transición</strong>
         </span>
         <span className="flex items-center gap-2">
           <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-[#fee2e2] border border-[#fca5a5] text-[#b91c1c] font-bold text-[12px] line-through">10</span>

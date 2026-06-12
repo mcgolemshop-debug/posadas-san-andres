@@ -205,10 +205,8 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
         {/* Fechas con calendario visual */}
         <Section icon={<CalendarDays className="w-5 h-5" />} titulo="Fechas">
           <p className="text-sm text-[var(--foreground-muted)] mb-3">
-            Selecciona el día de llegada y luego el día de salida. Los días en{' '}
-            <span className="text-[var(--danger)] font-medium">rojo tachado</span> no se pueden elegir.
-            Los días en <span className="text-amber-700 font-medium">amarillo</span> son de transición
-            (alguien entra o sale ese día) — puedes usarlos como tu llegada o salida si tu rango calza.
+            Selecciona primero el día de llegada y luego el día de salida.
+            Los días en <span className="text-[var(--danger)] font-medium">rojo tachado</span> están ocupados.
           </p>
 
           <div className="bg-white border border-[var(--border)] rounded-xl p-3 sm:p-4 inline-block w-full overflow-x-auto">
@@ -217,17 +215,14 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
               selected={rango}
               onSelect={setRango}
               modifiers={{
-                /* Noches plenas (intermedias): rojo tachado, no clickeable */
-                ocupado: nochesPlenas,
-                /* Día check-in existente: la tarde está ocupada — split diagonal */
-                checkin: checkIns,
-                /* Día check-out existente: la mañana está ocupada — split diagonal */
-                checkout: checkOuts,
+                // Visualmente, TODOS los días con cualquier ocupación se ven
+                // iguales (rojo tachado): noches plenas + check-ins + check-outs.
+                // La función `disabled` decide cuáles son clickeables como
+                // inicio o fin del rango propio.
+                ocupado: [...nochesPlenas, ...checkIns, ...checkOuts],
               }}
               modifiersClassNames={{
                 ocupado: 'rdp-ocupado',
-                checkin: 'rdp-checkin',
-                checkout: 'rdp-checkout',
               }}
               disabled={(day) => {
                 // No permitir hoy ni días anteriores
@@ -251,6 +246,8 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
 
                 // Caso inicial / re-selección: bloquear solo noches ya ocupadas
                 // (esto incluye check-ins existentes, que NO se pueden usar como check-in propio).
+                // Los check-outs existentes (fecha_fin) NO están en este set →
+                // sí se pueden clickear como check-in propio.
                 return fechasOcupadasIsoSet.has(iso);
               }}
               numberOfMonths={numMeses}
@@ -260,19 +257,26 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
             />
           </div>
 
-          {/* Leyenda explícita debajo del calendario — solo 3 estados */}
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-[var(--foreground-muted)]">
+          {/* Leyenda — solo 2 estados visuales */}
+          <div className="mt-3 flex flex-wrap gap-4 text-xs text-[var(--foreground-muted)]">
             <span className="flex items-center gap-2">
               <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-white border border-[var(--border-strong)] text-[var(--foreground)] font-bold text-[12px]">15</span>
               <span><strong>Disponible</strong></span>
             </span>
             <span className="flex items-center gap-2">
-              <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-[#fef3c7] border border-[#fde68a] text-[#92400e] font-bold text-[12px]">12</span>
-              <span><strong>Día de transición</strong> — alguien entra o sale</span>
-            </span>
-            <span className="flex items-center gap-2">
               <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-[#fee2e2] border border-[#fca5a5] text-[#b91c1c] font-bold text-[12px] line-through">10</span>
-              <span><strong className="text-[var(--danger)]">Ocupado</strong> — no se puede</span>
+              <span><strong className="text-[var(--danger)]">Ocupado</strong></span>
+            </span>
+          </div>
+
+          {/* Tip importante: días rojos clickeables como llegada/salida */}
+          <div className="mt-3 p-3 bg-[var(--primary-light)] border border-[var(--primary)]/20 rounded-lg text-xs text-[var(--foreground)] flex gap-2">
+            <span className="text-base leading-none">💡</span>
+            <span>
+              <strong>Tip:</strong> los días que aparecen en rojo porque otro huésped <strong>entra</strong> ese día
+              (a 2 PM) también puedes elegirlos como <strong>tu día de salida</strong> — solo necesitas estar fuera
+              antes de las 12 m. De igual forma, si otro huésped <strong>sale</strong> ese día puedes entrar
+              después de las 2 PM. <em>Pruébalo: si tu rango calza, el sistema te lo permite.</em>
             </span>
           </div>
 
