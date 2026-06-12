@@ -205,8 +205,10 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
         {/* Fechas con calendario visual */}
         <Section icon={<CalendarDays className="w-5 h-5" />} titulo="Fechas">
           <p className="text-sm text-[var(--foreground-muted)] mb-3">
-            Selecciona el día de llegada y luego el día de salida. Las fechas en{' '}
-            <span className="text-[var(--danger)] font-medium">rojo tachado</span> ya están ocupadas.
+            Selecciona el día de llegada y luego el día de salida. Los días en{' '}
+            <span className="text-[var(--danger)] font-medium">rojo tachado</span> no se pueden elegir.
+            Los días en <span className="text-amber-700 font-medium">amarillo</span> son de transición
+            (alguien entra o sale ese día) — puedes usarlos como tu llegada o salida si tu rango calza.
           </p>
 
           <div className="bg-white border border-[var(--border)] rounded-xl p-3 sm:p-4 inline-block w-full overflow-x-auto">
@@ -258,29 +260,19 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
             />
           </div>
 
-          {/* Leyenda explícita debajo del calendario */}
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-[var(--foreground-muted)]">
+          {/* Leyenda explícita debajo del calendario — solo 3 estados */}
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-[var(--foreground-muted)]">
             <span className="flex items-center gap-2">
-              <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-[var(--danger-light)] border border-[var(--danger)]/40 text-[var(--danger)] font-bold text-[11px]">×</span>
-              <span><strong className="text-[var(--danger)]">Ocupado</strong> — ya reservado</span>
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-white border border-[var(--border-strong)] text-[var(--foreground)] font-bold text-[12px]">15</span>
+              <span><strong>Disponible</strong></span>
             </span>
             <span className="flex items-center gap-2">
-              <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-white border border-[var(--border-strong)] text-[var(--foreground)] font-medium text-[11px]">●</span>
-              <span><strong>Disponible</strong> — puedes elegirlo</span>
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-[#fef3c7] border border-[#fde68a] text-[#92400e] font-bold text-[12px]">12</span>
+              <span><strong>Día de transición</strong> — alguien entra o sale</span>
             </span>
             <span className="flex items-center gap-2">
-              <span
-                className="w-6 h-6 rounded"
-                style={{ background: 'linear-gradient(90deg, #fed7aa 0% 50%, transparent 50% 100%)' }}
-              />
-              <span><strong>Puedes ENTRAR</strong> — otro cliente sale ese día a 12 m</span>
-            </span>
-            <span className="flex items-center gap-2">
-              <span
-                className="w-6 h-6 rounded"
-                style={{ background: 'linear-gradient(90deg, transparent 0% 50%, #fed7aa 50% 100%)' }}
-              />
-              <span><strong>Puedes SALIR</strong> — otro cliente entra ese día a 2 PM</span>
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-[#fee2e2] border border-[#fca5a5] text-[#b91c1c] font-bold text-[12px] line-through">10</span>
+              <span><strong className="text-[var(--danger)]">Ocupado</strong> — no se puede</span>
             </span>
           </div>
 

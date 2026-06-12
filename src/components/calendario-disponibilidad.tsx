@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react';
 import { DayPicker } from 'react-day-picker';
 import { es } from 'date-fns/locale';
-import { XCircle } from 'lucide-react';
 
 export interface ReservaCalendar {
   fecha_inicio: string;  // YYYY-MM-DD
@@ -91,31 +90,19 @@ export function CalendarioDisponibilidad({
         />
       </div>
 
-      {/* Leyenda */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-xs text-[var(--foreground-muted)]">
+      {/* Leyenda — 3 estados claros */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4 text-xs text-[var(--foreground-muted)]">
         <span className="flex items-center gap-2">
-          <span className="w-5 h-5 rounded bg-[var(--danger-light)] border border-[var(--danger)]/40 flex items-center justify-center">
-            <XCircle className="w-3 h-3 text-[var(--danger)]" />
-          </span>
-          <strong className="text-[var(--danger)]">Ocupado</strong>
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="w-5 h-5 rounded bg-white border border-[var(--border)]" />
+          <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-white border border-[var(--border-strong)] font-bold text-[12px]">15</span>
           <strong>Disponible</strong>
         </span>
         <span className="flex items-center gap-2">
-          <span
-            className="w-5 h-5 rounded"
-            style={{ background: 'linear-gradient(90deg, #fed7aa 0% 50%, transparent 50% 100%)' }}
-          />
-          Otro cliente sale ese día (12 m)
+          <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-[#fef3c7] border border-[#fde68a] text-[#92400e] font-bold text-[12px]">12</span>
+          <strong>Día de transición</strong>
         </span>
         <span className="flex items-center gap-2">
-          <span
-            className="w-5 h-5 rounded"
-            style={{ background: 'linear-gradient(90deg, transparent 0% 50%, #fed7aa 50% 100%)' }}
-          />
-          Otro cliente entra ese día (2 PM)
+          <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-[#fee2e2] border border-[#fca5a5] text-[#b91c1c] font-bold text-[12px] line-through">10</span>
+          <strong className="text-[var(--danger)]">Ocupado</strong>
         </span>
       </div>
 
