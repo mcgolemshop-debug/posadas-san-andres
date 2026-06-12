@@ -26,6 +26,7 @@ export default async function ReservaDetallePage({ params }: PageProps) {
     .select(
       `id, posada_id, fecha_inicio, fecha_fin, estado, modalidad, total_usd, desglose_precio,
        cliente_nombre, cliente_telefono, cliente_email, num_personas, notas,
+       descuento_usd, servicio_extra_usd, nota_descuento, nota_servicio_extra,
        gestor_id, comprobante_pago_url, motivo_rechazo,
        created_at, confirmada_at, cancelada_at,
        posadas(slug, nombre), apartamentos(nombre),
@@ -81,7 +82,7 @@ export default async function ReservaDetallePage({ params }: PageProps) {
     <div>
       <Link
         href="/admin/reservas"
-        className="inline-flex items-center gap-1 text-sm text-[var(--primary)] hover:text-[var(--primary-soft)] mb-4"
+        className="inline-flex items-center gap-1 text-sm text-[var(--primary)] hover:text-[var(--primary-hover)] mb-4"
       >
         <span aria-hidden>←</span> Volver al listado
       </Link>
@@ -147,6 +148,42 @@ export default async function ReservaDetallePage({ params }: PageProps) {
               <DesglosePrecio data={r.desglose_precio as unknown as { noches?: Array<{ fecha: string; temporada_nombre: string; precio_usd: number }>; temporadas_aplicadas?: Array<{ nombre: string; cantidad_noches: number }> }} />
             </Bloque>
           )}
+
+          {/* Recargo y descuento por servicio (admin) */}
+          {(Number(r.servicio_extra_usd ?? 0) > 0 || Number(r.descuento_usd ?? 0) > 0) && (
+            <Bloque titulo="Ajustes manuales del administrador">
+              {Number(r.servicio_extra_usd ?? 0) > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <div className="flex justify-between items-baseline mb-1">
+                    <span className="text-sm font-medium text-amber-900">Recargo por servicio</span>
+                    <span className="text-base font-semibold text-amber-900">
+                      +{formatoUSD(Number(r.servicio_extra_usd))}
+                    </span>
+                  </div>
+                  {r.nota_servicio_extra ? (
+                    <p className="text-xs text-amber-800 italic">&ldquo;{r.nota_servicio_extra as string}&rdquo;</p>
+                  ) : (
+                    <p className="text-xs text-[var(--muted)] italic">Sin nota explicativa.</p>
+                  )}
+                </div>
+              )}
+              {Number(r.descuento_usd ?? 0) > 0 && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                  <div className="flex justify-between items-baseline mb-1">
+                    <span className="text-sm font-medium text-emerald-900">Descuento por servicio</span>
+                    <span className="text-base font-semibold text-emerald-900">
+                      −{formatoUSD(Number(r.descuento_usd))}
+                    </span>
+                  </div>
+                  {r.nota_descuento ? (
+                    <p className="text-xs text-emerald-800 italic">&ldquo;{r.nota_descuento as string}&rdquo;</p>
+                  ) : (
+                    <p className="text-xs text-[var(--muted)] italic">Sin nota explicativa.</p>
+                  )}
+                </div>
+              )}
+            </Bloque>
+          )}
         </div>
 
         {/* Sidebar: total, comprobante, acciones */}
@@ -207,7 +244,7 @@ export default async function ReservaDetallePage({ params }: PageProps) {
                 href={comprobanteUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block w-full text-center bg-[var(--primary)] hover:bg-[var(--primary-soft)] text-white font-medium py-2 rounded-md transition-colors"
+                className="block w-full text-center bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-medium py-2 rounded-md transition-colors"
               >
                 📎 Ver comprobante
               </a>

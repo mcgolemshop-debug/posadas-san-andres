@@ -25,8 +25,9 @@ import type {
 import { formatoFechaCorta, formatoUSD } from '@/lib/formato';
 import { enviarReserva, type EstadoEnvio } from '@/app/posada/[slug]/reservar/actions';
 import {
-  fechasOcupadasParaContexto,
+  calcularSplit,
   rangoChocaConOcupadas,
+  type ContextoOcupacion,
   type ReservaCalendar,
 } from '@/components/calendario-disponibilidad';
 
@@ -97,28 +98,36 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
   const fechaInicio = rango?.from ? format(rango.from, 'yyyy-MM-dd') : '';
   const fechaFin = rango?.to ? format(rango.to, 'yyyy-MM-dd') : '';
 
-  // Fechas deshabilitadas: si modalidad=apartamento con N aptos seleccionados,
-  // bloqueamos las fechas ocupadas por CUALQUIERA de ellos.
-  const fechasOcupadas = useMemo(() => {
-    if (modalidad === 'completa') {
-      const ctx = { modalidad: 'completa', apartamentoId: null } as const;
-      return fechasOcupadasParaContexto(reservasConfirmadas, ctx, posada.slug);
+  // Desglose por contexto (modalidad / aptos seleccionados).
+  // - nochesPlenas: noche estrictamente intermedia → NO clickeable.
+  // - checkIns: día fecha_inicio existente → puede usarse como check-out propio.
+  // - checkOuts: día fecha_fin existente → puede usarse como check-in propio.
+  const { nochesPlenas, checkIns, checkOuts } = useMemo(() => {
+    const contextos: ContextoOcupacion[] = modalidad === 'completa'
+      ? [{ modalidad: 'completa', apartamentoId: null }]
+      : aptosSeleccionados.map((aptoId) => ({ modalidad: 'apartamento' as const, apartamentoId: aptoId }));
+
+    const acumNP: Date[] = [], acumCI: Date[] = [], acumCO: Date[] = [];
+    const yaNP = new Set<number>(), yaCI = new Set<number>(), yaCO = new Set<number>();
+    for (const ctx of contextos) {
+      const s = calcularSplit(reservasConfirmadas, ctx, posada.slug);
+      for (const d of s.nochesPlenas) if (!yaNP.has(d.getTime())) { yaNP.add(d.getTime()); acumNP.push(d); }
+      for (const d of s.checkIns)     if (!yaCI.has(d.getTime())) { yaCI.add(d.getTime()); acumCI.push(d); }
+      for (const d of s.checkOuts)    if (!yaCO.has(d.getTime())) { yaCO.add(d.getTime()); acumCO.push(d); }
     }
-    // Unir fechas ocupadas de todos los aptos seleccionados
-    const todas: Date[] = [];
-    const yaIncluidas = new Set<number>();
-    for (const aptoId of aptosSeleccionados) {
-      const ctx = { modalidad: 'apartamento', apartamentoId: aptoId } as const;
-      const ocupadas = fechasOcupadasParaContexto(reservasConfirmadas, ctx, posada.slug);
-      for (const d of ocupadas) {
-        if (!yaIncluidas.has(d.getTime())) {
-          yaIncluidas.add(d.getTime());
-          todas.push(d);
-        }
-      }
-    }
-    return todas;
+    return { nochesPlenas: acumNP, checkIns: acumCI, checkOuts: acumCO };
   }, [modalidad, aptosSeleccionados, reservasConfirmadas, posada.slug]);
+
+  // "fechasOcupadas" = noches que cualquier nuevo cliente tendría que respetar:
+  //   nochesPlenas ∪ checkIns. NO incluye checkOuts (esos son días libres por la tarde).
+  const fechasOcupadas = useMemo(() => [...checkIns, ...nochesPlenas], [checkIns, nochesPlenas]);
+
+  // Para look-up rápido durante la validación de selección del rango
+  const fechasOcupadasIsoSet = useMemo(() => {
+    const s = new Set<string>();
+    for (const d of fechasOcupadas) s.add(format(d, 'yyyy-MM-dd'));
+    return s;
+  }, [fechasOcupadas]);
 
   // Si el cliente cambia modalidad/apto y el rango actual choca → limpiar
   // Usamos un ref para acceder al rango actual sin disparar el effect en cada render
@@ -206,16 +215,42 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
               selected={rango}
               onSelect={setRango}
               modifiers={{
-                /* Reservas confirmadas — solo estas se ven en rojo tachado */
-                ocupado: fechasOcupadas,
+                /* Noches plenas (intermedias): rojo tachado, no clickeable */
+                ocupado: nochesPlenas,
+                /* Día check-in existente: la tarde está ocupada — split diagonal */
+                checkin: checkIns,
+                /* Día check-out existente: la mañana está ocupada — split diagonal */
+                checkout: checkOuts,
               }}
               modifiersClassNames={{
                 ocupado: 'rdp-ocupado',
+                checkin: 'rdp-checkin',
+                checkout: 'rdp-checkout',
               }}
-              disabled={[
-                { before: addDays(startOfToday(), 1) }, // no hoy ni atrás
-                ...fechasOcupadas.map((d) => ({ from: d, to: d })),
-              ]}
+              disabled={(day) => {
+                // No permitir hoy ni días anteriores
+                if (day < addDays(startOfToday(), 1)) return true;
+
+                const iso = format(day, 'yyyy-MM-dd');
+
+                // Mientras el cliente está eligiendo el check-OUT (ya tiene check-in)
+                // el día puede ser cualquiera > check-in siempre que ninguna noche
+                // intermedia esté ocupada. Esto permite seleccionar el día fecha_inicio
+                // de una reserva existente (el cliente sale a 12 m, el existente entra a 2 PM).
+                if (rango?.from && !rango.to && day > rango.from) {
+                  let cursor = new Date(rango.from);
+                  while (cursor < day) {
+                    const cursorIso = format(cursor, 'yyyy-MM-dd');
+                    if (fechasOcupadasIsoSet.has(cursorIso)) return true;
+                    cursor = addDays(cursor, 1);
+                  }
+                  return false;
+                }
+
+                // Caso inicial / re-selección: bloquear solo noches ya ocupadas
+                // (esto incluye check-ins existentes, que NO se pueden usar como check-in propio).
+                return fechasOcupadasIsoSet.has(iso);
+              }}
               numberOfMonths={numMeses}
               startMonth={new Date()}
               locale={es}
@@ -228,6 +263,20 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
             <span className="flex items-center gap-1.5">
               <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-[var(--danger-light)] border border-[var(--danger)]/40 text-[var(--danger)] font-bold text-[10px]">×</span>
               <span><strong className="text-[var(--danger)]">Ocupado</strong> (ya reservado)</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span
+                className="w-5 h-5 rounded border border-[#f87171]"
+                style={{ background: 'linear-gradient(135deg, #fecaca 0% 49%, transparent 51% 100%)' }}
+              />
+              <span><strong>Salida</strong> (otra reserva sale a 12 m, puedes entrar después)</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span
+                className="w-5 h-5 rounded border border-[#f87171]"
+                style={{ background: 'linear-gradient(135deg, transparent 0% 49%, #fecaca 51% 100%)' }}
+              />
+              <span><strong>Llegada</strong> (otra reserva entra a 2 PM, puedes salir antes)</span>
             </span>
             <span className="flex items-center gap-1.5">
               <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-gray-100 text-gray-400 text-[10px]">−</span>

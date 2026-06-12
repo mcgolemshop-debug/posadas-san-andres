@@ -15,7 +15,7 @@ export default async function EditarReservaPage({ params }: { params: Promise<{ 
     .from('reservas')
     .select(`id, posada_id, fecha_inicio, fecha_fin, modalidad, apartamento_id, apartamentos_ids,
        num_personas, num_personas_extras, cliente_nombre, cliente_telefono, cliente_email, notas,
-       descuento_usd, servicio_extra_usd, total_usd, gestor_id,
+       descuento_usd, servicio_extra_usd, nota_descuento, nota_servicio_extra, total_usd, gestor_id,
        posadas(slug, nombre, tipo_alquiler)`)
     .eq('id', id)
     .maybeSingle();
@@ -60,6 +60,8 @@ export default async function EditarReservaPage({ params }: { params: Promise<{ 
           notas: (r.notas as string | null) ?? null,
           descuento_usd: Number(r.descuento_usd ?? 0),
           servicio_extra_usd: Number(r.servicio_extra_usd ?? 0),
+          nota_descuento: (r.nota_descuento as string | null) ?? null,
+          nota_servicio_extra: (r.nota_servicio_extra as string | null) ?? null,
           total_usd: Number(r.total_usd),
           posada_slug: (posada?.slug as 'confort' | 'beach') ?? 'confort',
           posada_id: r.posada_id as string,

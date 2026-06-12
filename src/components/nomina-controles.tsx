@@ -27,7 +27,7 @@ export function GenerarNominaMes() {
         <span className="text-[var(--muted)]">Mes</span>
         <input type="month" name="mes" required defaultValue={mesActual()} className="mt-1 block px-3 py-1.5 border border-[var(--border)] rounded bg-white" />
       </label>
-      <button type="submit" disabled={pendiente} className="bg-[var(--primary)] hover:bg-[var(--primary-soft)] text-white px-4 py-1.5 rounded text-sm font-medium disabled:bg-gray-300">
+      <button type="submit" disabled={pendiente} className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white px-4 py-1.5 rounded text-sm font-medium disabled:bg-gray-300">
         {pendiente ? 'Generando…' : 'Generar sueldos del mes'}
       </button>
       {estado?.ok && <span className="text-sm text-emerald-700">✓ {estado.ok}</span>}

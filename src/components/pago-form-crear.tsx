@@ -40,7 +40,7 @@ export function PagoFormCrear({ reservas }: { reservas: ReservaOpcion[] }) {
         <button
           type="button"
           onClick={() => setAbierto(true)}
-          className="bg-[var(--primary)] hover:bg-[var(--primary-soft)] text-white px-4 py-2 rounded-md text-sm font-medium"
+          className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white px-4 py-2 rounded-md text-sm font-medium"
         >
           + Registrar pago
         </button>
@@ -111,7 +111,7 @@ export function PagoFormCrear({ reservas }: { reservas: ReservaOpcion[] }) {
             </div>
           )}
 
-          <button type="submit" disabled={pendiente} className="mt-4 bg-[var(--primary)] hover:bg-[var(--primary-soft)] disabled:bg-gray-300 text-white px-4 py-2 rounded-md text-sm font-medium">
+          <button type="submit" disabled={pendiente} className="mt-4 bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:bg-gray-300 text-white px-4 py-2 rounded-md text-sm font-medium">
             {pendiente ? 'Guardando…' : 'Registrar pago'}
           </button>
         </form>

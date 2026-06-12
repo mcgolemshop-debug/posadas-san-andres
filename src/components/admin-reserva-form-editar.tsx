@@ -29,6 +29,8 @@ interface ReservaInicial {
   notas: string | null;
   descuento_usd: number;
   servicio_extra_usd: number;
+  nota_descuento: string | null;
+  nota_servicio_extra: string | null;
   total_usd: number;
   posada_slug: 'confort' | 'beach';
   posada_id: string;
@@ -59,6 +61,8 @@ export function AdminReservaFormEditar({ reserva, apartamentos, temporadas, prec
   const [notas, setNotas] = useState(reserva.notas ?? '');
   const [descuentoUsd, setDescuentoUsd] = useState(reserva.descuento_usd);
   const [servicioExtraUsd, setServicioExtraUsd] = useState(reserva.servicio_extra_usd);
+  const [notaDescuento, setNotaDescuento] = useState(reserva.nota_descuento ?? '');
+  const [notaServicioExtra, setNotaServicioExtra] = useState(reserva.nota_servicio_extra ?? '');
 
   const [estado, accion, pendiente] = useActionState<EstadoAccion | null, FormData>(editarReserva, null);
 
@@ -139,15 +143,39 @@ export function AdminReservaFormEditar({ reserva, apartamentos, temporadas, prec
 
         {/* Extras y descuento */}
         <Seccion titulo="Cobros adicionales / descuento">
-          <div className="grid sm:grid-cols-3 gap-3">
-            <Field label="Personas extras">
-              <input className={ic} type="number" name="num_personas_extras" min={0} value={numPersonasExtras} onChange={(e) => setNumPersonasExtras(Number(e.target.value) || 0)} />
-            </Field>
-            <Field label="Servicio extra (USD)">
+          <Field label="Personas extras">
+            <input className={ic} type="number" name="num_personas_extras" min={0} value={numPersonasExtras} onChange={(e) => setNumPersonasExtras(Number(e.target.value) || 0)} />
+          </Field>
+
+          <div className="bg-amber-50/50 border border-amber-200 rounded-lg p-3 space-y-2">
+            <Field label="Recargo por servicio (USD)">
               <input className={ic} type="number" step="0.01" name="servicio_extra_usd" min={0} value={servicioExtraUsd} onChange={(e) => setServicioExtraUsd(Number(e.target.value) || 0)} />
             </Field>
-            <Field label="Descuento (USD)">
+            <Field label="¿Por qué este recargo?">
+              <textarea
+                className={ic}
+                name="nota_servicio_extra"
+                rows={2}
+                placeholder='Ej: "Lancha al cliente, 2 personas adicionales"'
+                value={notaServicioExtra}
+                onChange={(e) => setNotaServicioExtra(e.target.value)}
+              />
+            </Field>
+          </div>
+
+          <div className="bg-emerald-50/50 border border-emerald-200 rounded-lg p-3 space-y-2">
+            <Field label="Descuento por servicio (USD)">
               <input className={ic} type="number" step="0.01" name="descuento_usd" min={0} value={descuentoUsd} onChange={(e) => setDescuentoUsd(Number(e.target.value) || 0)} />
+            </Field>
+            <Field label="¿Por qué este descuento?">
+              <textarea
+                className={ic}
+                name="nota_descuento"
+                rows={2}
+                placeholder='Ej: "Precio negociado con Vulcanos, $200 menos del tarifario"'
+                value={notaDescuento}
+                onChange={(e) => setNotaDescuento(e.target.value)}
+              />
             </Field>
           </div>
         </Seccion>

@@ -166,7 +166,7 @@ export default async function ReportesPage({ searchParams }: PageProps) {
         </p>
         <a
           href={`/admin/reportes/exportar?mes=${mes}`}
-          className="inline-block bg-[var(--primary)] hover:bg-[var(--primary-soft)] text-white px-4 py-2 rounded-md text-sm font-medium"
+          className="inline-block bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white px-4 py-2 rounded-md text-sm font-medium"
         >
           📥 Descargar movimientos {MESES_ES[mesNum - 1]} {anyo}.csv
         </a>

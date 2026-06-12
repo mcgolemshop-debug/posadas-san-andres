@@ -77,7 +77,7 @@ export default async function PosadasConfigPage() {
                   className="mt-1 w-full px-3 py-2 border border-[var(--border)] rounded-md bg-white"
                 />
               </label>
-              <button type="submit" className="bg-[var(--primary)] hover:bg-[var(--primary-soft)] text-white px-4 py-1.5 rounded-md text-sm">
+              <button type="submit" className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white px-4 py-1.5 rounded-md text-sm">
                 Guardar
               </button>
             </form>
@@ -144,7 +144,7 @@ export default async function PosadasConfigPage() {
                   className="mt-1 w-full px-2 py-1 border border-[var(--border)] rounded bg-white"
                 />
               </label>
-              <button type="submit" className="bg-[var(--primary)] hover:bg-[var(--primary-soft)] text-white px-3 py-1 rounded text-xs w-full">
+              <button type="submit" className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white px-3 py-1 rounded text-xs w-full">
                 Guardar
               </button>
             </form>
@@ -350,7 +350,7 @@ function FormTemporada({ t }: { t: { id: string; nombre: string; fecha_inicio: s
         <span>En Confort, esta temporada solo permite "completa"</span>
       </label>
       <div className="sm:col-span-2">
-        <button type="submit" className="bg-[var(--primary)] hover:bg-[var(--primary-soft)] text-white px-4 py-1.5 rounded text-sm">
+        <button type="submit" className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white px-4 py-1.5 rounded text-sm">
           {t ? 'Guardar cambios' : 'Crear temporada'}
         </button>
       </div>

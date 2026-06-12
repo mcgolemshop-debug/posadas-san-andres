@@ -226,6 +226,8 @@ const editarSchema = z.object({
   notas: z.string().max(2000).optional().nullable(),
   descuento_usd: z.coerce.number().min(0).default(0),
   servicio_extra_usd: z.coerce.number().min(0).default(0),
+  nota_descuento: z.string().max(500).optional().nullable(),
+  nota_servicio_extra: z.string().max(500).optional().nullable(),
   total_usd: z.coerce.number().min(0),
 });
 
@@ -252,6 +254,8 @@ export async function editarReserva(
     notas: formData.get('notas') || null,
     descuento_usd: formData.get('descuento_usd') || 0,
     servicio_extra_usd: formData.get('servicio_extra_usd') || 0,
+    nota_descuento: (formData.get('nota_descuento') as string | null) || null,
+    nota_servicio_extra: (formData.get('nota_servicio_extra') as string | null) || null,
     total_usd: formData.get('total_usd'),
   };
 
@@ -291,6 +295,8 @@ export async function editarReserva(
       notas: d.notas,
       descuento_usd: d.descuento_usd,
       servicio_extra_usd: d.servicio_extra_usd,
+      nota_descuento: d.nota_descuento ?? null,
+      nota_servicio_extra: d.nota_servicio_extra ?? null,
       total_usd: d.total_usd,
     })
     .eq('id', d.reserva_id);

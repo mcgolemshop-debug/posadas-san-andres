@@ -45,8 +45,8 @@ export function CalendarioDisponibilidad({
     { modalidad: 'completa'; apartamentoId: null } | { modalidad: 'apartamento'; apartamentoId: string }
   >({ modalidad: 'completa', apartamentoId: null });
 
-  const fechasOcupadas = useMemo(
-    () => calcularFechasOcupadas(reservas, contexto, posadaSlug),
+  const { nochesPlenas, checkIns, checkOuts } = useMemo(
+    () => calcularSplit(reservas, contexto, posadaSlug),
     [reservas, contexto, posadaSlug],
   );
 
@@ -78,9 +78,12 @@ export function CalendarioDisponibilidad({
           mode="single"
           selected={undefined}
           onSelect={() => {}}
-          modifiers={{ ocupado: fechasOcupadas }}
-          modifiersClassNames={{ ocupado: 'rdp-ocupado' }}
-          disabled={fechasOcupadas.map((d) => ({ from: d, to: d }))}
+          modifiers={{ ocupado: nochesPlenas, checkin: checkIns, checkout: checkOuts }}
+          modifiersClassNames={{
+            ocupado: 'rdp-ocupado',
+            checkin: 'rdp-checkin',
+            checkout: 'rdp-checkout',
+          }}
           numberOfMonths={meses}
           startMonth={new Date()}
           locale={es}
@@ -95,6 +98,20 @@ export function CalendarioDisponibilidad({
             <XCircle className="w-3 h-3 text-[var(--danger)]" />
           </span>
           Ocupado
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span
+            className="w-4 h-4 rounded border border-[#f87171]"
+            style={{ background: 'linear-gradient(135deg, #fecaca 0% 49%, transparent 51% 100%)' }}
+          />
+          Día de salida (12:00 m)
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span
+            className="w-4 h-4 rounded border border-[#f87171]"
+            style={{ background: 'linear-gradient(135deg, transparent 0% 49%, #fecaca 51% 100%)' }}
+          />
+          Día de llegada (2:00 PM)
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-4 h-4 rounded bg-white border border-[var(--border)]" />
@@ -130,32 +147,57 @@ function FiltroChip({
 
 /* --------------- helpers --------------- */
 
+export type ContextoOcupacion =
+  | { modalidad: 'completa'; apartamentoId: null }
+  | { modalidad: 'apartamento'; apartamentoId: string };
+
+export interface DesgloseOcupacion {
+  /** Noches "plenas" entre el primer día y el último (estrictamente, F+1 a L-1). */
+  nochesPlenas: Date[];
+  /** Día fecha_inicio de cada reserva relevante. La tarde está ocupada, la mañana libre. */
+  checkIns: Date[];
+  /** Día fecha_fin de cada reserva relevante. La mañana está ocupada, la tarde libre. */
+  checkOuts: Date[];
+}
+
 /**
- * Devuelve la lista de Date objects (una por cada noche [inicio, fin))
- * que están ocupadas para el contexto dado.
+ * Devuelve un desglose con 3 listas:
+ *   - nochesPlenas: el cliente NO puede usar este día de ninguna forma.
+ *   - checkIns: el cliente PUEDE usarlo como SU check-out (sale a 12 m), no como check-in.
+ *   - checkOuts: el cliente PUEDE usarlo como SU check-in (entra a 2 PM), no como check-out.
  *
- * Reglas:
+ * Reglas de filtrado:
  *   - Beach: TODAS las reservas confirmadas bloquean.
  *   - Confort completa: TODAS las reservas en Confort bloquean.
  *   - Confort apartamento X: reservas del mismo apto + cualquier completa.
  */
-function calcularFechasOcupadas(
+export function calcularSplit(
   reservas: ReservaCalendar[],
-  contexto: { modalidad: 'completa'; apartamentoId: null } | { modalidad: 'apartamento'; apartamentoId: string },
+  contexto: ContextoOcupacion,
   posadaSlug: 'confort' | 'beach',
-): Date[] {
-  const fechas: Date[] = [];
+): DesgloseOcupacion {
+  const nochesPlenas: Date[] = [];
+  const checkIns: Date[] = [];
+  const checkOuts: Date[] = [];
   for (const r of reservas) {
-    if (debeBloquear(r, contexto, posadaSlug)) {
-      acumularNoches(fechas, r.fecha_inicio, r.fecha_fin);
+    if (!debeBloquear(r, contexto, posadaSlug)) continue;
+    const inicio = new Date(r.fecha_inicio + 'T12:00:00Z');
+    const fin = new Date(r.fecha_fin + 'T12:00:00Z');
+    checkIns.push(new Date(inicio));
+    checkOuts.push(new Date(fin));
+    // Días intermedios (estrictamente entre F+1 y L-1)
+    let cursor = new Date(inicio.getTime() + 24 * 60 * 60 * 1000);
+    while (cursor < fin) {
+      nochesPlenas.push(new Date(cursor));
+      cursor = new Date(cursor.getTime() + 24 * 60 * 60 * 1000);
     }
   }
-  return fechas;
+  return { nochesPlenas, checkIns, checkOuts };
 }
 
 function debeBloquear(
   r: ReservaCalendar,
-  ctx: { modalidad: 'completa'; apartamentoId: null } | { modalidad: 'apartamento'; apartamentoId: string },
+  ctx: ContextoOcupacion,
   posadaSlug: 'confort' | 'beach',
 ): boolean {
   if (posadaSlug === 'beach') return true;
@@ -168,19 +210,11 @@ function debeBloquear(
   return susAptos.includes(ctx.apartamentoId);
 }
 
-function acumularNoches(out: Date[], inicio: string, fin: string): void {
-  let actual = new Date(inicio + 'T12:00:00Z');
-  const end = new Date(fin + 'T12:00:00Z');
-  while (actual < end) {
-    out.push(new Date(actual));
-    actual = new Date(actual.getTime() + 24 * 60 * 60 * 1000);
-  }
-}
-
 /**
- * Helper exportado: dado un rango de fechas elegido por el usuario y la
- * lista de fechas ocupadas, devuelve TRUE si el rango choca con alguna.
- * Útil para el formulario de reserva.
+ * Helper: dado un rango de fechas [fechaInicio, fechaFin) elegido por el cliente,
+ * y la lista de "noches ocupadas" (que incluye check-ins + nochesPlenas, NO check-outs),
+ * devuelve TRUE si hay choque. fechaFin es exclusiva: si el cliente sale el día F (fecha_inicio
+ * existente), eso NO choca porque sale a 12 m antes del check-in a 2 PM.
  */
 export function rangoChocaConOcupadas(
   fechaInicio: string,
@@ -193,13 +227,42 @@ export function rangoChocaConOcupadas(
 }
 
 /**
- * Helper exportado: para usar como prop `disabled` de DayPicker,
- * devuelve la lista de Date objects que el usuario no puede seleccionar.
+ * Helper exportado para `reserva-form.tsx`: combina check-ins + nochesPlenas
+ * en una sola lista de fechas que representan "noches ocupadas" — fechas en las
+ * que el cliente NO puede iniciar reserva ni hacer pasar su rango.
  */
 export function fechasOcupadasParaContexto(
   reservas: ReservaCalendar[],
-  contexto: { modalidad: 'completa'; apartamentoId: null } | { modalidad: 'apartamento'; apartamentoId: string },
+  contexto: ContextoOcupacion,
   posadaSlug: 'confort' | 'beach',
 ): Date[] {
-  return calcularFechasOcupadas(reservas, contexto, posadaSlug);
+  const { nochesPlenas, checkIns } = calcularSplit(reservas, contexto, posadaSlug);
+  return [...checkIns, ...nochesPlenas];
+}
+
+/** Días de check-OUT (fecha_fin) de cada reserva relevante. NO ocupan noche. */
+export function fechasCheckOutParaContexto(
+  reservas: ReservaCalendar[],
+  contexto: ContextoOcupacion,
+  posadaSlug: 'confort' | 'beach',
+): Date[] {
+  return calcularSplit(reservas, contexto, posadaSlug).checkOuts;
+}
+
+/** Días de check-IN (fecha_inicio) de cada reserva relevante. Sí ocupan noche. */
+export function fechasCheckInParaContexto(
+  reservas: ReservaCalendar[],
+  contexto: ContextoOcupacion,
+  posadaSlug: 'confort' | 'beach',
+): Date[] {
+  return calcularSplit(reservas, contexto, posadaSlug).checkIns;
+}
+
+/** Solo las noches "plenas" (entre F+1 y L-1, sin check-in ni check-out). */
+export function nochesPlenasParaContexto(
+  reservas: ReservaCalendar[],
+  contexto: ContextoOcupacion,
+  posadaSlug: 'confort' | 'beach',
+): Date[] {
+  return calcularSplit(reservas, contexto, posadaSlug).nochesPlenas;
 }
