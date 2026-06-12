@@ -92,34 +92,30 @@ export function CalendarioDisponibilidad({
       </div>
 
       {/* Leyenda */}
-      <div className="flex flex-wrap gap-4 mt-4 text-xs text-[var(--foreground-muted)]">
-        <span className="flex items-center gap-1.5">
-          <span className="w-4 h-4 rounded bg-[var(--danger-light)] border border-[var(--danger)]/30 flex items-center justify-center">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-xs text-[var(--foreground-muted)]">
+        <span className="flex items-center gap-2">
+          <span className="w-5 h-5 rounded bg-[var(--danger-light)] border border-[var(--danger)]/40 flex items-center justify-center">
             <XCircle className="w-3 h-3 text-[var(--danger)]" />
           </span>
-          Ocupado
+          <strong className="text-[var(--danger)]">Ocupado</strong>
         </span>
-        <span className="flex items-center gap-1.5">
+        <span className="flex items-center gap-2">
+          <span className="w-5 h-5 rounded bg-white border border-[var(--border)]" />
+          <strong>Disponible</strong>
+        </span>
+        <span className="flex items-center gap-2">
           <span
-            className="w-4 h-4 rounded border border-[#f87171]"
-            style={{ background: 'linear-gradient(135deg, #fecaca 0% 49%, transparent 51% 100%)' }}
+            className="w-5 h-5 rounded"
+            style={{ background: 'linear-gradient(90deg, #fed7aa 0% 50%, transparent 50% 100%)' }}
           />
-          Día de salida (12:00 m)
+          Otro cliente sale ese día (12 m)
         </span>
-        <span className="flex items-center gap-1.5">
+        <span className="flex items-center gap-2">
           <span
-            className="w-4 h-4 rounded border border-[#f87171]"
-            style={{ background: 'linear-gradient(135deg, transparent 0% 49%, #fecaca 51% 100%)' }}
+            className="w-5 h-5 rounded"
+            style={{ background: 'linear-gradient(90deg, transparent 0% 50%, #fed7aa 50% 100%)' }}
           />
-          Día de llegada (2:00 PM)
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-4 h-4 rounded bg-white border border-[var(--border)]" />
-          Disponible
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-4 h-4 rounded border-2 border-[var(--accent)] bg-white" />
-          Hoy
+          Otro cliente entra ese día (2 PM)
         </span>
       </div>
 

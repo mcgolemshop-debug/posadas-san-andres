@@ -181,7 +181,7 @@ export function CalendarioMes({ mes, posadaNombre, filas, reservas, esCompleta }
                           <Link
                             href={`/admin/reservas/${ckOut.id}`}
                             className="absolute inset-0 hover:brightness-95"
-                            style={{ background: `linear-gradient(135deg, ${colorHex} 0% 49%, transparent 51% 100%)` }}
+                            style={{ background: `linear-gradient(90deg, ${colorHex} 0% 50%, transparent 50% 100%)` }}
                             title={`${ckOut.cliente_nombre} sale ${ckOut.fecha_fin} a 12 m`}
                           />
                         </td>
@@ -211,13 +211,13 @@ export function CalendarioMes({ mes, posadaNombre, filas, reservas, esCompleta }
                         <Link
                           href={`/admin/reservas/${ckOut.id}`}
                           className="absolute inset-0 hover:brightness-95"
-                          style={{ background: `linear-gradient(135deg, ${colorOut} 0% 49%, transparent 51% 100%)` }}
+                          style={{ background: `linear-gradient(90deg, ${colorOut} 0% 50%, transparent 50% 100%)` }}
                           title={`${ckOut.cliente_nombre} sale ${ckOut.fecha_fin} a 12 m`}
                         />
                         <Link
                           href={`/admin/reservas/${r.id}`}
                           className="absolute inset-0 hover:brightness-95 flex items-end justify-end pr-1 pb-0.5"
-                          style={{ background: `linear-gradient(135deg, transparent 0% 49%, ${colorIn} 51% 100%)` }}
+                          style={{ background: `linear-gradient(90deg, transparent 0% 50%, ${colorIn} 50% 100%)` }}
                           title={`${r.cliente_nombre} entra ${r.fecha_inicio} a 2 PM`}
                         >
                           <span className="text-[9px] font-semibold text-white">
@@ -236,7 +236,7 @@ export function CalendarioMes({ mes, posadaNombre, filas, reservas, esCompleta }
                         <Link
                           href={`/admin/reservas/${r.id}`}
                           className="absolute inset-0 hover:brightness-95 flex items-end justify-end pr-1 pb-0.5"
-                          style={{ background: `linear-gradient(135deg, transparent 0% 49%, ${colorHex} 51% 100%)` }}
+                          style={{ background: `linear-gradient(90deg, transparent 0% 50%, ${colorHex} 50% 100%)` }}
                           title={`${r.cliente_nombre} entra ${r.fecha_inicio} a 2 PM · sale ${r.fecha_fin}`}
                         >
                           <span className="text-[9px] font-semibold text-white">

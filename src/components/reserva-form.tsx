@@ -259,32 +259,28 @@ export function ReservaForm({ posada, apartamentos, temporadas, precios, reserva
           </div>
 
           {/* Leyenda explícita debajo del calendario */}
-          <div className="mt-3 flex flex-wrap gap-3 text-xs text-[var(--foreground-muted)]">
-            <span className="flex items-center gap-1.5">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-[var(--danger-light)] border border-[var(--danger)]/40 text-[var(--danger)] font-bold text-[10px]">×</span>
-              <span><strong className="text-[var(--danger)]">Ocupado</strong> (ya reservado)</span>
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-[var(--foreground-muted)]">
+            <span className="flex items-center gap-2">
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-[var(--danger-light)] border border-[var(--danger)]/40 text-[var(--danger)] font-bold text-[11px]">×</span>
+              <span><strong className="text-[var(--danger)]">Ocupado</strong> — ya reservado</span>
             </span>
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-2">
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-white border border-[var(--border-strong)] text-[var(--foreground)] font-medium text-[11px]">●</span>
+              <span><strong>Disponible</strong> — puedes elegirlo</span>
+            </span>
+            <span className="flex items-center gap-2">
               <span
-                className="w-5 h-5 rounded border border-[#f87171]"
-                style={{ background: 'linear-gradient(135deg, #fecaca 0% 49%, transparent 51% 100%)' }}
+                className="w-6 h-6 rounded"
+                style={{ background: 'linear-gradient(90deg, #fed7aa 0% 50%, transparent 50% 100%)' }}
               />
-              <span><strong>Salida</strong> (otra reserva sale a 12 m, puedes entrar después)</span>
+              <span><strong>Puedes ENTRAR</strong> — otro cliente sale ese día a 12 m</span>
             </span>
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-2">
               <span
-                className="w-5 h-5 rounded border border-[#f87171]"
-                style={{ background: 'linear-gradient(135deg, transparent 0% 49%, #fecaca 51% 100%)' }}
+                className="w-6 h-6 rounded"
+                style={{ background: 'linear-gradient(90deg, transparent 0% 50%, #fed7aa 50% 100%)' }}
               />
-              <span><strong>Llegada</strong> (otra reserva entra a 2 PM, puedes salir antes)</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-gray-100 text-gray-400 text-[10px]">−</span>
-              <span>Días pasados</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-white border border-[var(--border-strong)] text-[var(--foreground)] font-medium text-[10px]">●</span>
-              <span><strong>Disponible</strong></span>
+              <span><strong>Puedes SALIR</strong> — otro cliente entra ese día a 2 PM</span>
             </span>
           </div>
 
